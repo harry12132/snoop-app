@@ -73,6 +73,7 @@ class SnoopOverlayView(
     private var musicPlayPauseView: ApplePlayPauseIconView? = null
     private var musicSkipPrevView: AppleSkipIconView? = null
     private var musicSkipNextView: AppleSkipIconView? = null
+    private var musicEqualizerView: EqualizerView? = null
 
     private val gestureDetector = GestureDetector(
         context,
@@ -229,6 +230,7 @@ class SnoopOverlayView(
                 }
                 musicSkipPrevView?.setOnClickListener { state.music.onSkipPrev?.invoke() }
                 musicSkipNextView?.setOnClickListener { state.music.onSkipNext?.invoke() }
+                musicEqualizerView?.setPlaying(state.music.isPlaying)
                 val duration = state.music.durationMs
                 musicProgressView?.progress = if (duration > 0L) {
                     ((state.music.positionMs * 100L) / duration).toInt().coerceIn(0, 100)
@@ -305,6 +307,7 @@ class SnoopOverlayView(
         musicPlayPauseView = null
         musicSkipPrevView = null
         musicSkipNextView = null
+        musicEqualizerView = null
         removeAllViews()
         if (isExpanded) {
             renderExpandedView()
@@ -530,9 +533,10 @@ class SnoopOverlayView(
         textCol.addView(trackText)
         textCol.addView(artistText)
 
-        val eqView = EqualizerView(context).apply {
+        val eqView = EqualizerView(context, music.isPlaying).apply {
             layoutParams = LinearLayout.LayoutParams(dp(22), dp(18))
         }
+        musicEqualizerView = eqView
 
         row.addView(artView)
         row.addView(textCol)
