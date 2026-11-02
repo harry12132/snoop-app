@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
+import android.os.Build
 import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -83,11 +84,17 @@ class MainActivity : ComponentActivity() {
     private var hasOverlayPermission by mutableStateOf(false)
     private var hasNotifListenerPermission by mutableStateOf(false)
     private var hasPhonePermission by mutableStateOf(false)
+    private var hasNotificationPermission by mutableStateOf(false)
 
     private val requestPhonePermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
             hasPhonePermission = isGranted
             SnoopApp.getInstance().stateHub.refreshCallPermission()
+        }
+
+    private val requestNotificationPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+            hasNotificationPermission = isGranted
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -103,11 +110,13 @@ class MainActivity : ComponentActivity() {
                     hasOverlayPermission = hasOverlayPermission,
                     hasNotifListenerPermission = hasNotifListenerPermission,
                     hasPhonePermission = hasPhonePermission,
+                    hasNotificationPermission = hasNotificationPermission,
                     onEnableOverlayPermission = ::openOverlayPermissionSettings,
                     onEnableNotifListenerPermission = ::openNotifListenerPermissionSettings,
                     onRequestPhonePermission = {
                         requestPhonePermissionLauncher.launch(android.Manifest.permission.READ_PHONE_STATE)
                     },
+                    onRequestNotificationPermission = ::requestNotificationPermission,
                     onStartService = ::startSnoopService,
                     onStopService = ::stopSnoopService
                 )
@@ -131,6 +140,14 @@ class MainActivity : ComponentActivity() {
             SnoopApp.getInstance().stateHub.refreshCallPermission()
         }
         hasNotifListenerPermission = isNotificationListenerEnabled(this)
+        hasNotificationPermission = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+            ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+    }
+
+    private fun requestNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            requestNotificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+        }
     }
 
     private fun isNotificationListenerEnabled(context: Context): Boolean {
@@ -189,9 +206,11 @@ private fun MainContent(
     hasOverlayPermission: Boolean,
     hasNotifListenerPermission: Boolean,
     hasPhonePermission: Boolean,
+    hasNotificationPermission: Boolean,
     onEnableOverlayPermission: () -> Unit,
     onEnableNotifListenerPermission: () -> Unit,
     onRequestPhonePermission: () -> Unit,
+    onRequestNotificationPermission: () -> Unit,
     onStartService: () -> Unit,
     onStopService: () -> Unit
 ) {
@@ -283,9 +302,11 @@ private fun MainContent(
                         hasOverlayPermission = hasOverlayPermission,
                         hasNotifListenerPermission = hasNotifListenerPermission,
                         hasPhonePermission = hasPhonePermission,
+                        hasNotificationPermission = hasNotificationPermission,
                         onEnableOverlayPermission = onEnableOverlayPermission,
                         onEnableNotifListenerPermission = onEnableNotifListenerPermission,
                         onRequestPhonePermission = onRequestPhonePermission,
+                        onRequestNotificationPermission = onRequestNotificationPermission,
                         onStartService = onStartService,
                         onStopService = onStopService
                     )
@@ -302,9 +323,11 @@ private fun OverviewTab(
     hasOverlayPermission: Boolean,
     hasNotifListenerPermission: Boolean,
     hasPhonePermission: Boolean,
+    hasNotificationPermission: Boolean,
     onEnableOverlayPermission: () -> Unit,
     onEnableNotifListenerPermission: () -> Unit,
     onRequestPhonePermission: () -> Unit,
+    onRequestNotificationPermission: () -> Unit,
     onStartService: () -> Unit,
     onStopService: () -> Unit
 ) {
@@ -396,6 +419,15 @@ private fun OverviewTab(
             subtitle = "Detects incoming calls and call duration.",
             isGranted = hasPhonePermission,
             onGrant = onRequestPhonePermission
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        PermissionCard(
+            title = "Notification Permission",
+            subtitle = "Allows Android to show Snoop's ongoing service notification.",
+            isGranted = hasNotificationPermission,
+            onGrant = onRequestNotificationPermission
         )
     }
 }
