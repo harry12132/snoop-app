@@ -71,7 +71,13 @@ class SnoopOverlayController(
                 currentParams.gravity = gravityFor(updated.alignment)
                 currentParams.x = dp(updated.offsetXDp, density)
                 currentParams.y = dp(updated.offsetYDp, density)
-                windowManager.updateViewLayout(view, currentParams)
+                try {
+                    windowManager.updateViewLayout(view, currentParams)
+                } catch (_: IllegalArgumentException) {
+                    hide()
+                } catch (_: WindowManager.BadTokenException) {
+                    hide()
+                }
             }
         }
     }
