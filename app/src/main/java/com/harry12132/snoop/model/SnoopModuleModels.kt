@@ -66,10 +66,10 @@ data class StopwatchState(
 )
 
 data class NavigationState(
-    val appName: String = "Maps",
-    val instruction: String = "Head North",
-    val distanceText: String = "500 m",
-    val etaText: String = "12 min",
+    val appName: String = "",
+    val instruction: String = "",
+    val distanceText: String = "",
+    val etaText: String = "",
     val iconBitmap: Bitmap? = null
 )
 
@@ -88,6 +88,7 @@ data class NotificationState(
     val text: String = "",
     val postTime: Long = System.currentTimeMillis(),
     val actions: List<NotificationActionItem> = emptyList(),
+    val onOpen: (() -> Unit)? = null,
     val onDismiss: (() -> Unit)? = null
 )
 
@@ -100,7 +101,7 @@ data class BatteryState(
 
 data class DownloadState(
     val downloadId: String = "",
-    val fileName: String = "Downloading file",
+    val fileName: String = "",
     val percentage: Int = 0,
     val bytesDownloaded: Long = 0L,
     val totalBytes: Long = 0L,
@@ -116,7 +117,9 @@ data class SystemControlState(
     val ringerMode: RingerMode = RingerMode.NORMAL,
     val volumePercent: Int = 50,
     val onToggleFlashlight: (() -> Unit)? = null,
-    val onToggleRinger: (() -> Unit)? = null
+    val onToggleRinger: (() -> Unit)? = null,
+    val onVolumeDown: (() -> Unit)? = null,
+    val onVolumeUp: (() -> Unit)? = null
 )
 
 data class SnoopOverlayState(

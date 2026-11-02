@@ -37,7 +37,7 @@ class SnoopStateHub(
 
     val batteryObserver = BatteryObserver(context)
     val callObserver = CallObserver(context)
-    val timerStopwatchEngine = TimerStopwatchEngine()
+    val timerStopwatchEngine = TimerStopwatchEngine(context)
     val systemControlsManager = SystemControlsManager(context)
 
     private val _overlayState = MutableStateFlow(SnoopOverlayState())
@@ -46,8 +46,10 @@ class SnoopStateHub(
     private var userSelectedModuleIndex = 0
 
     fun start() {
+        if (hubJob?.isActive == true) return
         batteryObserver.start()
         callObserver.start()
+        systemControlsManager.start()
 
         hubJob = scope.launch {
             launch { observeSettings() }
@@ -61,10 +63,25 @@ class SnoopStateHub(
         }
     }
 
+    fun refreshCallPermission() {
+        if (hubJob?.isActive != true) return
+        callObserver.stop()
+        callObserver.start()
+    }
+
+    fun startTimer(seconds: Int, label: String) {
+        timerStopwatchEngine.startTimer(seconds, label)
+    }
+
+    fun startStopwatch() {
+        timerStopwatchEngine.startStopwatch()
+    }
+
     fun stop() {
         hubJob?.cancel()
         batteryObserver.stop()
         callObserver.stop()
+        systemControlsManager.stop()
     }
 
     private suspend fun observeSettings() {
@@ -129,6 +146,7 @@ class SnoopStateHub(
     private suspend fun periodicMediaCheck() {
         while (true) {
             SnoopNotificationListenerService.updateMediaSessions(context)
+            systemControlsManager.updateState()
             delay(2000L)
         }
     }
@@ -169,9 +187,9 @@ class SnoopStateHub(
         val available = mutableListOf<ModuleType>()
 
         if (settings.enableCalls && activeCall != null) available.add(ModuleType.CALL)
-        if (settings.enableTimers && (timer.isRunning || timer.isCompleted)) available.add(ModuleType.TIMER)
-        if (settings.enableStopwatches && stopwatch.isRunning) available.add(ModuleType.STOPWATCH)
-        if (settings.enableNavigation && nav.instruction.isNotBlank() && nav.distanceText != "Navigating") available.add(ModuleType.NAVIGATION)
+        if (settings.enableTimers && (timer.isRunning || timer.isCompleted || timer.remainingSeconds < timer.totalSeconds)) available.add(ModuleType.TIMER)
+        if (settings.enableStopwatches && (stopwatch.isRunning || stopwatch.elapsedMillis > 0L || stopwatch.laps.isNotEmpty())) available.add(ModuleType.STOPWATCH)
+        if (settings.enableNavigation && nav.instruction.isNotBlank()) available.add(ModuleType.NAVIGATION)
         if (settings.enableMusic && (music.isPlaying || music.title != "No Track")) available.add(ModuleType.MUSIC)
         if (settings.enableNotifications && notif.title.isNotBlank()) available.add(ModuleType.NOTIFICATION)
         if (settings.enableDownloads && download.fileName.isNotBlank() && !download.isCompleted) available.add(ModuleType.DOWNLOAD)
@@ -182,8 +200,12 @@ class SnoopStateHub(
             available.add(ModuleType.IDLE)
         }
 
-        if (userSelectedModuleIndex >= available.size) {
-            userSelectedModuleIndex = 0
+        val previouslySelected = _overlayState.value.activeModule
+        val previousIndex = available.indexOf(previouslySelected)
+        userSelectedModuleIndex = if (previousIndex >= 0) {
+            previousIndex
+        } else {
+            userSelectedModuleIndex.coerceIn(0, available.lastIndex)
         }
 
         val primaryModule = available.firstOrNull() ?: ModuleType.IDLE
@@ -203,24 +225,4 @@ class SnoopStateHub(
         )
     }
 
-    // --- SIMULATION HELPERS FOR TESTING ---
-    fun simulateCall(status: CallStatus, name: String = "Jane Doe") {
-        callObserver.setSimulatedCall(status, name)
-    }
-
-    fun simulateMusic(isPlaying: Boolean, title: String = "Blinding Lights", artist: String = "The Weeknd") {
-        SnoopNotificationListenerService.updateMediaSessions(context)
-    }
-
-    fun startTimer(seconds: Int = 180, label: String = "Tea Timer") {
-        timerStopwatchEngine.startTimer(seconds, label)
-    }
-
-    fun startStopwatch() {
-        timerStopwatchEngine.startStopwatch()
-    }
-
-    fun toggleFlashlight() {
-        systemControlsManager.toggleFlashlight()
-    }
 }

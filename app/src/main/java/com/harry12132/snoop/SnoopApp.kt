@@ -17,7 +17,6 @@ class SnoopApp : Application() {
         instance = this
         settingsManager = SnoopSettingsManager(this)
         stateHub = SnoopStateHub(this, settingsManager)
-        stateHub.start()
     }
 
     companion object {

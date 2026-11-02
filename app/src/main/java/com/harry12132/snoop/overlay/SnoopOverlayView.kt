@@ -13,7 +13,7 @@ import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
-import android.view.animation.OvershootInterpolator
+import android.view.animation.DecelerateInterpolator
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -25,7 +25,6 @@ import com.harry12132.snoop.model.CallStatus
 import com.harry12132.snoop.model.ModuleType
 import com.harry12132.snoop.model.RingerMode
 import com.harry12132.snoop.model.SnoopOverlayState
-import com.harry12132.snoop.ui.AppleCallActionButton
 import com.harry12132.snoop.ui.ApplePlayPauseIconView
 import com.harry12132.snoop.ui.AppleSkipIconView
 import com.harry12132.snoop.ui.EqualizerView
@@ -61,6 +60,20 @@ class SnoopOverlayView(
     private var initialParamY = 0
 
     private var animator: ValueAnimator? = null
+    private val autoCollapseHandler = Handler(Looper.getMainLooper())
+    private val autoCollapseRunnable = Runnable {
+        if (isExpanded && currentSettings.autoCollapseSeconds > 0) animateTo(false)
+    }
+    private var collapsedTitleView: TextView? = null
+    private var collapsedRightTextView: TextView? = null
+    private var timerValueView: TextView? = null
+    private var stopwatchValueView: TextView? = null
+    private var callStatusView: TextView? = null
+    private var musicProgressView: ProgressBar? = null
+    private var musicPlayPauseView: ApplePlayPauseIconView? = null
+    private var musicSkipPrevView: AppleSkipIconView? = null
+    private var musicSkipNextView: AppleSkipIconView? = null
+    private var musicEqualizerView: EqualizerView? = null
 
     private val gestureDetector = GestureDetector(
         context,
@@ -87,7 +100,7 @@ class SnoopOverlayView(
                 val diffY = e2.y - e1.y
 
                 if (abs(diffX) > abs(diffY)) {
-                    if (abs(diffX) > 80 && abs(velocityX) > 80) {
+                    if (currentSettings.enableSwipeGestures && abs(diffX) > 80 && abs(velocityX) > 80) {
                         if (diffX > 0) {
                             stateHub.cycleNextModule()
                         } else {
@@ -95,7 +108,7 @@ class SnoopOverlayView(
                         }
                         return true
                     }
-                } else if (diffY < -80 && abs(velocityY) > 80) {
+                } else if (currentSettings.enableSwipeGestures && diffY < -80 && abs(velocityY) > 80) {
                     if (isExpanded) {
                         animateTo(false)
                         return true
@@ -126,15 +139,109 @@ class SnoopOverlayView(
             mainPillBackground.setStroke(0, Color.TRANSPARENT)
         }
         mainPillBackground.cornerRadius = if (isExpanded) dp(settings.cornerRadiusDp).toFloat() else dp(settings.collapsedHeightDp / 2).toFloat()
+
+        val targetWidth = widthFor(isExpanded, settings)
+        val targetHeight = dp(if (isExpanded) settings.expandedHeightDp else settings.collapsedHeightDp)
+        windowParams.width = targetWidth
+        windowParams.height = targetHeight
+        layoutParams?.let { params ->
+            params.width = targetWidth
+            params.height = targetHeight
+            layoutParams = params
+        }
         invalidate()
     }
 
     fun updateOverlayState(state: SnoopOverlayState) {
+        val previous = currentState
         currentState = state
-        renderUI()
+
+        val contentChanged = previous.activeModule != state.activeModule ||
+            previous.availableModules != state.availableModules ||
+            when (state.activeModule) {
+                ModuleType.MUSIC -> previous.music.title != state.music.title ||
+                    previous.music.artist != state.music.artist ||
+                    previous.music.artwork !== state.music.artwork ||
+                    previous.music.isPlaying != state.music.isPlaying ||
+                    previous.music.packageName != state.music.packageName ||
+                    previous.music.durationMs != state.music.durationMs
+                ModuleType.CALL -> previous.call.callerName != state.call.callerName ||
+                    previous.call.status != state.call.status
+                ModuleType.TIMER -> previous.timer.label != state.timer.label ||
+                    previous.timer.totalSeconds != state.timer.totalSeconds ||
+                    previous.timer.isRunning != state.timer.isRunning ||
+                    previous.timer.isCompleted != state.timer.isCompleted
+                ModuleType.STOPWATCH -> previous.stopwatch.isRunning != state.stopwatch.isRunning ||
+                    previous.stopwatch.laps != state.stopwatch.laps
+                ModuleType.NAVIGATION -> previous.navigation.instruction != state.navigation.instruction ||
+                    previous.navigation.distanceText != state.navigation.distanceText ||
+                    previous.navigation.etaText != state.navigation.etaText
+                ModuleType.NOTIFICATION -> previous.notification.id != state.notification.id ||
+                    previous.notification.title != state.notification.title ||
+                    previous.notification.text != state.notification.text ||
+                    previous.notification.actions.map { it.title } != state.notification.actions.map { it.title } ||
+                    (previous.notification.onOpen != null) != (state.notification.onOpen != null)
+                ModuleType.BATTERY -> previous.battery.percentage != state.battery.percentage ||
+                    previous.battery.isCharging != state.battery.isCharging ||
+                    previous.battery.plugType != state.battery.plugType
+                ModuleType.DOWNLOAD -> previous.download.fileName != state.download.fileName ||
+                    previous.download.percentage != state.download.percentage ||
+                    previous.download.isCompleted != state.download.isCompleted
+                ModuleType.SYSTEM_CONTROL -> previous.systemControl.isFlashlightOn != state.systemControl.isFlashlightOn ||
+                    previous.systemControl.ringerMode != state.systemControl.ringerMode ||
+                    previous.systemControl.volumePercent != state.systemControl.volumePercent
+                ModuleType.IDLE -> false
+            }
+
+        if (contentChanged) {
+            renderUI()
+            return
+        }
+
+        collapsedTitleView?.text = getCollapsedTitle()
+        when (state.activeModule) {
+            ModuleType.TIMER -> {
+                val text = String.format("%02d:%02d", state.timer.remainingSeconds / 60, state.timer.remainingSeconds % 60)
+                timerValueView?.text = if (state.timer.isCompleted) "00:00" else text
+                collapsedRightTextView?.text = text
+            }
+            ModuleType.STOPWATCH -> {
+                val totalSecs = state.stopwatch.elapsedMillis / 1000
+                val millis = (state.stopwatch.elapsedMillis % 1000) / 10
+                val text = String.format("%02d:%02d.%02d", totalSecs / 60, totalSecs % 60, millis)
+                stopwatchValueView?.text = text
+                collapsedRightTextView?.text = text
+            }
+            ModuleType.CALL -> {
+                val mins = state.call.durationSeconds / 60
+                val secs = state.call.durationSeconds % 60
+                callStatusView?.text = when (state.call.status) {
+                    CallStatus.INCOMING -> "Incoming Call"
+                    CallStatus.OUTGOING -> "Calling..."
+                    CallStatus.ACTIVE -> "Active Call • " + String.format("%02d:%02d", mins, secs)
+                    CallStatus.ENDED -> "Call Ended"
+                }
+            }
+            ModuleType.MUSIC -> {
+                musicPlayPauseView?.let { control ->
+                    control.isPlaying = state.music.isPlaying
+                    control.setOnClickListener { state.music.onPlayPause?.invoke() }
+                    control.invalidate()
+                }
+                musicSkipPrevView?.setOnClickListener { state.music.onSkipPrev?.invoke() }
+                musicSkipNextView?.setOnClickListener { state.music.onSkipNext?.invoke() }
+                musicEqualizerView?.setPlaying(state.music.isPlaying)
+                val duration = state.music.durationMs
+                musicProgressView?.progress = if (duration > 0L) {
+                    ((state.music.positionMs * 100L) / duration).toInt().coerceIn(0, 100)
+                } else 0
+            }
+            else -> Unit
+        }
     }
 
     fun dispose() {
+        autoCollapseHandler.removeCallbacks(autoCollapseRunnable)
         animator?.cancel()
         animator = null
     }
@@ -144,12 +251,16 @@ class SnoopOverlayView(
     }
 
     private fun animateTo(targetExpanded: Boolean) {
+        autoCollapseHandler.removeCallbacks(autoCollapseRunnable)
         if (animator?.isRunning == true) animator?.cancel()
+        if (targetExpanded && currentSettings.autoCollapseSeconds > 0) {
+            autoCollapseHandler.postDelayed(autoCollapseRunnable, currentSettings.autoCollapseSeconds * 1000L)
+        }
         isExpanded = targetExpanded
 
-        val collapsedWidth = dp(currentSettings.collapsedWidthDp)
+        val collapsedWidth = widthFor(false, currentSettings)
         val collapsedHeight = dp(currentSettings.collapsedHeightDp)
-        val expandedWidth = dp(currentSettings.expandedWidthDp)
+        val expandedWidth = widthFor(true, currentSettings)
         val expandedHeight = dp(currentSettings.expandedHeightDp)
 
         val startWidth = layoutParams?.width ?: collapsedWidth
@@ -164,7 +275,7 @@ class SnoopOverlayView(
 
         animator = ValueAnimator.ofFloat(0f, 1f).apply {
             duration = 340L
-            interpolator = OvershootInterpolator(0.7f)
+            interpolator = DecelerateInterpolator(1.8f)
             addUpdateListener { animation ->
                 val progress = animation.animatedValue as Float
                 val params = layoutParams ?: return@addUpdateListener
@@ -187,6 +298,16 @@ class SnoopOverlayView(
     }
 
     private fun renderUI() {
+        collapsedTitleView = null
+        collapsedRightTextView = null
+        timerValueView = null
+        stopwatchValueView = null
+        callStatusView = null
+        musicProgressView = null
+        musicPlayPauseView = null
+        musicSkipPrevView = null
+        musicSkipNextView = null
+        musicEqualizerView = null
         removeAllViews()
         if (isExpanded) {
             renderExpandedView()
@@ -219,6 +340,8 @@ class SnoopOverlayView(
 
         // Right Side: Animated Equalizer or Timer Ring or Battery
         val rightView = buildCollapsedRightElement()
+        collapsedTitleView = middleText
+        collapsedRightTextView = rightView as? TextView
 
         root.addView(leftView)
         root.addView(middleText)
@@ -279,6 +402,16 @@ class SnoopOverlayView(
                 val rem = currentState.timer.remainingSeconds
                 TextView(context).apply {
                     text = String.format("%02d:%02d", rem / 60, rem % 60)
+                    setTextColor(Color.rgb(255, 159, 10))
+                    textSize = 12f
+                    typeface = Typeface.DEFAULT_BOLD
+                }
+            }
+            ModuleType.STOPWATCH -> {
+                val totalSecs = currentState.stopwatch.elapsedMillis / 1000
+                val millis = (currentState.stopwatch.elapsedMillis % 1000) / 10
+                TextView(context).apply {
+                    text = String.format("%02d:%02d.%02d", totalSecs / 60, totalSecs % 60, millis)
                     setTextColor(Color.rgb(255, 159, 10))
                     textSize = 12f
                     typeface = Typeface.DEFAULT_BOLD
@@ -400,9 +533,10 @@ class SnoopOverlayView(
         textCol.addView(trackText)
         textCol.addView(artistText)
 
-        val eqView = EqualizerView(context).apply {
+        val eqView = EqualizerView(context, music.isPlaying).apply {
             layoutParams = LinearLayout.LayoutParams(dp(22), dp(18))
         }
+        musicEqualizerView = eqView
 
         row.addView(artView)
         row.addView(textCol)
@@ -410,7 +544,7 @@ class SnoopOverlayView(
 
         // Progress Bar
         val progressBar = ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal).apply {
-            val progressPct = if (music.durationMs > 0) ((music.positionMs * 100) / music.durationMs).toInt() else 35
+            val progressPct = if (music.durationMs > 0) ((music.positionMs * 100) / music.durationMs).toInt() else 0
             progress = progressPct
             max = 100
             layoutParams = LinearLayout.LayoutParams(
@@ -420,6 +554,8 @@ class SnoopOverlayView(
                 setMargins(0, dp(12), 0, dp(12))
             }
         }
+
+        musicProgressView = progressBar
 
         // Apple Controls Row
         val controlsRow = LinearLayout(context).apply {
@@ -434,6 +570,8 @@ class SnoopOverlayView(
             setOnClickListener { music.onSkipPrev?.invoke() }
         }
 
+        musicSkipPrevView = prevIcon
+
         val playPauseIcon = ApplePlayPauseIconView(context, isPlaying = music.isPlaying).apply {
             layoutParams = LinearLayout.LayoutParams(dp(36), dp(36)).apply {
                 setMargins(dp(16), 0, dp(16), 0)
@@ -441,12 +579,16 @@ class SnoopOverlayView(
             setOnClickListener { music.onPlayPause?.invoke() }
         }
 
+        musicPlayPauseView = playPauseIcon
+
         val nextIcon = AppleSkipIconView(context, isNext = true).apply {
             layoutParams = LinearLayout.LayoutParams(dp(28), dp(28)).apply {
                 setMargins(dp(16), 0, dp(16), 0)
             }
             setOnClickListener { music.onSkipNext?.invoke() }
         }
+
+        musicSkipNextView = nextIcon
 
         controlsRow.addView(prevIcon)
         controlsRow.addView(playPauseIcon)
@@ -483,43 +625,25 @@ class SnoopOverlayView(
             gravity = Gravity.CENTER_HORIZONTAL
         }
 
-        val actionsRow = LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER
-            setPadding(0, dp(16), 0, 0)
+        callStatusView = statusText
+
+        val guidanceText = TextView(context).apply {
+            text = when (call.status) {
+                CallStatus.INCOMING -> "Answer or decline using your phone's call controls."
+                CallStatus.OUTGOING, CallStatus.ACTIVE -> "Manage this call using your phone's call controls."
+                CallStatus.ENDED -> "Call finished."
+            }
+            setTextColor(Color.rgb(142, 142, 147))
+            textSize = 12f
+            gravity = Gravity.CENTER_HORIZONTAL
+            setPadding(0, dp(12), 0, 0)
         }
 
-        if (call.status == CallStatus.INCOMING) {
-            val answerBtn = AppleCallActionButton(context, isAnswer = true) {
-                call.onAnswer?.invoke()
-            }.apply {
-                layoutParams = LinearLayout.LayoutParams(dp(52), dp(52)).apply {
-                    setMargins(dp(16), 0, dp(16), 0)
-                }
-            }
-
-            val declineBtn = AppleCallActionButton(context, isAnswer = false) {
-                call.onReject?.invoke()
-            }.apply {
-                layoutParams = LinearLayout.LayoutParams(dp(52), dp(52)).apply {
-                    setMargins(dp(16), 0, dp(16), 0)
-                }
-            }
-
-            actionsRow.addView(declineBtn)
-            actionsRow.addView(answerBtn)
-        } else {
-            val endBtn = AppleCallActionButton(context, isAnswer = false) {
-                stateHub.callObserver.setSimulatedCall(CallStatus.ENDED)
-            }.apply {
-                layoutParams = LinearLayout.LayoutParams(dp(52), dp(52))
-            }
-            actionsRow.addView(endBtn)
-        }
-
+        // Android does not let an ordinary overlay app answer or hang up
+        // cellular calls. Do not show decorative buttons that cannot work.
         container.addView(callerText)
         container.addView(statusText)
-        container.addView(actionsRow)
+        container.addView(guidanceText)
     }
 
     private fun buildTimerViewExpanded(container: LinearLayout) {
@@ -536,6 +660,8 @@ class SnoopOverlayView(
             typeface = Typeface.DEFAULT_BOLD
             gravity = Gravity.CENTER_HORIZONTAL
         }
+
+        timerValueView = timerText
 
         val labelText = TextView(context).apply {
             text = timer.label
@@ -586,6 +712,8 @@ class SnoopOverlayView(
             gravity = Gravity.CENTER_HORIZONTAL
         }
 
+        stopwatchValueView = swText
+
         val actionsRow = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
@@ -608,6 +736,22 @@ class SnoopOverlayView(
 
         container.addView(swText)
         container.addView(actionsRow)
+
+        if (sw.laps.isNotEmpty()) {
+            val lapsText = TextView(context).apply {
+                val recentLaps = sw.laps.takeLast(3).asReversed().mapIndexed { index, cumulative ->
+                    val previous = sw.laps.takeLast(3).asReversed().getOrNull(index + 1) ?: 0L
+                    val lapTime = (cumulative - previous).coerceAtLeast(0L)
+                    val lapNumber = sw.laps.size - index
+                    "Lap $lapNumber  " + String.format("%02d:%02d.%02d", lapTime / 60000, (lapTime / 1000) % 60, (lapTime % 1000) / 10)
+                }
+                text = recentLaps.joinToString("\n")
+                setTextColor(Color.rgb(174, 174, 178))
+                textSize = 11f
+                setPadding(0, dp(8), 0, 0)
+            }
+            container.addView(lapsText)
+        }
     }
 
     private fun buildNavigationViewExpanded(container: LinearLayout) {
@@ -649,6 +793,26 @@ class SnoopOverlayView(
 
         container.addView(titleText)
         container.addView(bodyText)
+
+        if (notif.onOpen != null) {
+            container.addView(createAppleButton("Open") {
+                notif.onOpen?.invoke()
+            })
+        }
+
+        notif.actions.take(2).forEach { action ->
+            container.addView(createAppleButton(action.title) {
+                try {
+                    action.intent?.send()
+                    action.onClick?.invoke()
+                } catch (_: android.app.PendingIntent.CanceledException) {
+                    // The source app may have withdrawn this action.
+                }
+            })
+        }
+        container.addView(createAppleButton("Dismiss") {
+            notif.onDismiss?.invoke()
+        })
     }
 
     private fun buildBatteryViewExpanded(container: LinearLayout) {
@@ -706,6 +870,14 @@ class SnoopOverlayView(
     private fun buildSystemControlViewExpanded(container: LinearLayout) {
         val sys = currentState.systemControl
 
+        val volumeText = TextView(context).apply {
+            text = "Media volume: ${sys.volumePercent}%"
+            setTextColor(Color.rgb(174, 174, 178))
+            textSize = 12f
+            gravity = Gravity.CENTER_HORIZONTAL
+            setPadding(0, 0, 0, dp(10))
+        }
+
         val row = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
@@ -723,10 +895,19 @@ class SnoopOverlayView(
         val ringerBtn = createAppleButton(ringerText) {
             sys.onToggleRinger?.invoke()
         }
+        val volumeDownBtn = createAppleButton("Vol −") {
+            sys.onVolumeDown?.invoke()
+        }
+        val volumeUpBtn = createAppleButton("Vol +") {
+            sys.onVolumeUp?.invoke()
+        }
 
         row.addView(flashBtn)
         row.addView(ringerBtn)
+        row.addView(volumeDownBtn)
+        row.addView(volumeUpBtn)
 
+        container.addView(volumeText)
         container.addView(row)
     }
 
@@ -808,9 +989,9 @@ class SnoopOverlayView(
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        if (gestureDetector.onTouchEvent(event)) {
-            return true
-        }
+        // Always feed the detector, but do not return early: the same gesture
+        // stream also drives long-press dragging below.
+        gestureDetector.onTouchEvent(event)
 
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
@@ -834,7 +1015,11 @@ class SnoopOverlayView(
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 if (isDraggingPosition) {
                     isDraggingPosition = false
-                    mainPillBackground.setStroke(0, Color.TRANSPARENT)
+                    if (currentSettings.showAlignmentGuide) {
+                        mainPillBackground.setStroke(dp(2), Color.argb(220, 255, 59, 48))
+                    } else {
+                        mainPillBackground.setStroke(0, Color.TRANSPARENT)
+                    }
                     invalidate()
                     stateHub.settingsManager.updateSettings {
                         it.copy(offsetXDp = pxToDp(windowParams.x), offsetYDp = pxToDp(windowParams.y))
@@ -843,6 +1028,12 @@ class SnoopOverlayView(
             }
         }
         return true
+    }
+
+    private fun widthFor(expanded: Boolean, settings: SnoopSettings): Int {
+        val requestedDp = if (expanded) settings.expandedWidthDp else settings.collapsedWidthDp
+        val maxWidth = (resources.displayMetrics.widthPixels - dp(24)).coerceAtLeast(dp(120))
+        return dp(requestedDp).coerceAtMost(maxWidth)
     }
 
     private fun dp(value: Int): Int = (value * density).roundToInt()

@@ -10,10 +10,11 @@ import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
 import android.provider.Settings
+import android.view.WindowManager
 import androidx.core.app.NotificationCompat
 import com.harry12132.snoop.MainActivity
 import com.harry12132.snoop.R
-import com.harry12132.snoop.data.SnoopSettingsManager
+import com.harry12132.snoop.SnoopApp
 import com.harry12132.snoop.manager.SnoopStateHub
 import com.harry12132.snoop.overlay.SnoopOverlayController
 
@@ -26,11 +27,9 @@ class SnoopOverlayService : Service() {
         instance = this
         createNotificationChannel()
 
-        val settingsManager = SnoopSettingsManager(this)
-        val hub = SnoopStateHub(this, settingsManager)
+        val hub = SnoopApp.getInstance().stateHub
         stateHub = hub
         hub.start()
-
         overlayController = SnoopOverlayController(this, hub)
     }
 
@@ -40,16 +39,15 @@ class SnoopOverlayService : Service() {
             return START_NOT_STICKY
         }
 
-        startAsForegroundService()
-
-        if (!Settings.canDrawOverlays(this)) {
-            stopSnoop()
-            return START_NOT_STICKY
-        }
-
         return try {
-            overlayController?.show()
-            START_STICKY
+            startAsForegroundService()
+            if (!Settings.canDrawOverlays(this)) {
+                stopSnoop()
+                START_NOT_STICKY
+            } else {
+                overlayController?.show()
+                START_STICKY
+            }
         } catch (_: Exception) {
             stopSnoop()
             START_NOT_STICKY
@@ -58,7 +56,7 @@ class SnoopOverlayService : Service() {
 
     private fun startAsForegroundService() {
         val notification = buildNotification()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             startForeground(
                 NOTIFICATION_ID,
                 notification,
@@ -109,7 +107,7 @@ class SnoopOverlayService : Service() {
     }
 
     private fun stopSnoop() {
-        overlayController?.hide()
+        overlayController?.dispose()
         overlayController = null
         stateHub?.stop()
         stateHub = null
@@ -118,7 +116,7 @@ class SnoopOverlayService : Service() {
     }
 
     override fun onDestroy() {
-        overlayController?.hide()
+        overlayController?.dispose()
         overlayController = null
         stateHub?.stop()
         stateHub = null

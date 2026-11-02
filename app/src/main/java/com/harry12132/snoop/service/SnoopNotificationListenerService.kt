@@ -1,6 +1,7 @@
 package com.harry12132.snoop.service
 
 import android.app.Notification
+import android.app.PendingIntent
 import android.content.Context
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
@@ -31,6 +32,11 @@ class SnoopNotificationListenerService : NotificationListenerService() {
 
     override fun onListenerDisconnected() {
         instance = null
+        latestMediaNotificationKey = null
+        _latestMusicFlow.value = null
+        _latestNavigationFlow.value = null
+        _latestNotificationFlow.value = null
+        _latestDownloadFlow.value = null
         super.onListenerDisconnected()
     }
 
@@ -40,25 +46,19 @@ class SnoopNotificationListenerService : NotificationListenerService() {
     }
 
     override fun onNotificationRemoved(sbn: StatusBarNotification?) {
-        sbn ?: return
-        val key = sbn.key
-        if (latestNotificationFlow.value?.id == key) {
-            _latestNotificationFlow.value = null
-        }
-        if (latestNavigationFlow.value?.appName == getAppName(sbn.packageName)) {
-            _latestNavigationFlow.value = null
-        }
-        if (latestDownloadFlow.value?.downloadId == key) {
-            _latestDownloadFlow.value = null
-        }
+        if (sbn == null) return
+        syncActiveNotifications()
     }
 
     private fun syncActiveNotifications() {
         try {
-            val active = activeNotifications ?: return
-            for (sbn in active) {
-                processNotification(sbn)
-            }
+            val active = activeNotifications ?: emptyArray()
+            latestMediaNotificationKey = null
+            _latestMusicFlow.value = null
+            _latestNavigationFlow.value = null
+            _latestNotificationFlow.value = null
+            _latestDownloadFlow.value = null
+            active.sortedBy { it.postTime }.forEach(::processNotification)
         } catch (_: Exception) {
         }
     }
@@ -115,13 +115,21 @@ class SnoopNotificationListenerService : NotificationListenerService() {
 
         if (isMediaCategory) {
             updateMediaStateFromNotification(sbn, title, text, extras)
+            return
         }
+
+        // Ignore Snoop's own persistent service notification and unrelated
+        // ongoing system notifications. They are not user-facing alerts.
+        if (pkg == packageName || (notification.flags and Notification.FLAG_ONGOING_EVENT) != 0) return
 
         // General Notification
         if (title.isNotBlank() || text.isNotBlank()) {
             val appIcon = getNotificationLargeIcon(extras, pkg)
             val actionsList = mutableListOf<NotificationActionItem>()
-            notification.actions?.forEach { act ->
+            notification.actions
+                ?.filter { it.actionIntent != null && it.remoteInputs.isNullOrEmpty() }
+                ?.take(2)
+                ?.forEach { act ->
                 actionsList.add(
                     NotificationActionItem(
                         title = act.title?.toString() ?: "Action",
@@ -139,6 +147,15 @@ class SnoopNotificationListenerService : NotificationListenerService() {
                 text = text,
                 postTime = sbn.postTime,
                 actions = actionsList,
+                onOpen = sbn.notification.contentIntent?.let { contentIntent ->
+                    {
+                        try {
+                            contentIntent.send()
+                        } catch (_: PendingIntent.CanceledException) {
+                            // The source app may have withdrawn this notification.
+                        }
+                    }
+                },
                 onDismiss = {
                     try {
                         cancelNotification(sbn.key)
@@ -155,15 +172,42 @@ class SnoopNotificationListenerService : NotificationListenerService() {
         artist: String,
         extras: Bundle
     ) {
+        latestMediaNotificationKey = sbn.key
         val artwork = getNotificationLargeIcon(extras, sbn.packageName)
         val currentMusic = _latestMusicFlow.value ?: MusicState()
+        val actionLabels = sbn.notification.actions
+            ?.mapNotNull { it.title?.toString()?.lowercase() }
+            .orEmpty()
+        val isPlaying = when {
+            actionLabels.any { "pause" in it } -> true
+            actionLabels.any { "play" in it } -> false
+            else -> currentMusic.isPlaying
+        }
+
+        val actions = sbn.notification.actions.orEmpty()
+        fun actionIntent(vararg keywords: String): (() -> Unit)? {
+            val action = actions.firstOrNull { item ->
+                val label = item.title?.toString()?.lowercase().orEmpty()
+                keywords.any { keyword -> label.contains(keyword) } && item.actionIntent != null
+            } ?: return null
+            return {
+                try {
+                    action.actionIntent.send()
+                } catch (_: PendingIntent.CanceledException) {
+                    // The media app may have replaced its notification.
+                }
+            }
+        }
 
         _latestMusicFlow.value = currentMusic.copy(
             title = title.ifBlank { "Playing Media" },
             artist = artist.ifBlank { getAppName(sbn.packageName) },
             artwork = artwork ?: currentMusic.artwork,
-            isPlaying = true,
-            packageName = sbn.packageName
+            isPlaying = isPlaying,
+            packageName = sbn.packageName,
+            onPlayPause = actionIntent(if (isPlaying) "pause" else "play"),
+            onSkipNext = actionIntent("next", "skip"),
+            onSkipPrev = actionIntent("previous", "back")
         )
     }
 
@@ -195,6 +239,7 @@ class SnoopNotificationListenerService : NotificationListenerService() {
 
     companion object {
         private var instance: SnoopNotificationListenerService? = null
+        private var latestMediaNotificationKey: String? = null
 
         private val _latestMusicFlow = MutableStateFlow<MusicState?>(null)
         val latestMusicFlow: StateFlow<MusicState?> = _latestMusicFlow
@@ -215,8 +260,16 @@ class SnoopNotificationListenerService : NotificationListenerService() {
                 val mediaManager = context.getSystemService(Context.MEDIA_SESSION_SERVICE) as? MediaSessionManager
                 val componentName = android.content.ComponentName(context, SnoopNotificationListenerService::class.java)
                 val controllers = mediaManager?.getActiveSessions(componentName)
-                if (!controllers.isNullOrEmpty()) {
-                    val controller = controllers[0]
+                if (controllers.isNullOrEmpty()) {
+                    if (latestMediaNotificationKey == null) {
+                        _latestMusicFlow.value = null
+                    }
+                    return
+                }
+                val controller = controllers.firstOrNull {
+                    it.playbackState?.state == PlaybackState.STATE_PLAYING
+                } ?: controllers.first()
+                run {
                     val metadata = controller.metadata
                     val playbackState = controller.playbackState
 
@@ -239,8 +292,11 @@ class SnoopNotificationListenerService : NotificationListenerService() {
                         positionMs = pos,
                         packageName = controller.packageName,
                         onPlayPause = {
-                            if (isPlaying) controller.transportControls.pause()
-                            else controller.transportControls.play()
+                            if (controller.playbackState?.state == PlaybackState.STATE_PLAYING) {
+                                controller.transportControls.pause()
+                            } else {
+                                controller.transportControls.play()
+                            }
                         },
                         onSkipNext = { controller.transportControls.skipToNext() },
                         onSkipPrev = { controller.transportControls.skipToPrevious() }
