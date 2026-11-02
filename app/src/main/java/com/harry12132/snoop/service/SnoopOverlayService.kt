@@ -16,7 +16,6 @@ import com.harry12132.snoop.R
 import com.harry12132.snoop.overlay.SnoopOverlayController
 
 class SnoopOverlayService : Service() {
-
     private var overlayController: SnoopOverlayController? = null
 
     override fun onCreate() {
@@ -30,7 +29,7 @@ class SnoopOverlayService : Service() {
             return START_NOT_STICKY
         }
 
-        // A foreground notification must be posted immediately after service start.
+        // Promote immediately; Android requires a foreground notification.
         startAsForegroundService()
 
         if (!Settings.canDrawOverlays(this)) {
@@ -45,9 +44,6 @@ class SnoopOverlayService : Service() {
             overlayController?.show()
             START_STICKY
         } catch (_: SecurityException) {
-            stopSnoop()
-            START_NOT_STICKY
-        } catch (_: WindowManagerFailure) {
             stopSnoop()
             START_NOT_STICKY
         } catch (_: android.view.WindowManager.BadTokenException) {
@@ -129,4 +125,3 @@ class SnoopOverlayService : Service() {
         private const val NOTIFICATION_ID = 4101
     }
 }
-
