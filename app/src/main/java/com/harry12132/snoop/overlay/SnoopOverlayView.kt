@@ -731,6 +731,22 @@ class SnoopOverlayView(
 
         container.addView(swText)
         container.addView(actionsRow)
+
+        if (sw.laps.isNotEmpty()) {
+            val lapsText = TextView(context).apply {
+                val recentLaps = sw.laps.takeLast(3).asReversed().mapIndexed { index, cumulative ->
+                    val previous = sw.laps.takeLast(3).asReversed().getOrNull(index + 1) ?: 0L
+                    val lapTime = (cumulative - previous).coerceAtLeast(0L)
+                    val lapNumber = sw.laps.size - index
+                    "Lap $lapNumber  " + String.format("%02d:%02d.%02d", lapTime / 60000, (lapTime / 1000) % 60, (lapTime % 1000) / 10)
+                }
+                text = recentLaps.joinToString("\\n")
+                setTextColor(Color.rgb(174, 174, 178))
+                textSize = 11f
+                setPadding(0, dp(8), 0, 0)
+            }
+            container.addView(lapsText)
+        }
     }
 
     private fun buildNavigationViewExpanded(container: LinearLayout) {
