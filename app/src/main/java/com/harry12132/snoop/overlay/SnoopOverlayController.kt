@@ -50,6 +50,7 @@ class SnoopOverlayController(context: Context) {
     fun hide() {
         val view = overlayView ?: return
         overlayView = null
+        view.dispose()
         try {
             windowManager.removeView(view)
         } catch (_: IllegalArgumentException) {
