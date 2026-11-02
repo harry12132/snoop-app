@@ -38,7 +38,7 @@ class SnoopOverlayController(
         val settings = stateHub.settingsManager.getSettings()
         val density = appContext.resources.displayMetrics.density
         val windowParams = WindowManager.LayoutParams(
-            dp(settings.collapsedWidthDp, density),
+            minOf(dp(settings.collapsedWidthDp, density), (appContext.resources.displayMetrics.widthPixels - dp(24, density)).coerceAtLeast(dp(120, density))),
             dp(settings.collapsedHeightDp, density),
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
