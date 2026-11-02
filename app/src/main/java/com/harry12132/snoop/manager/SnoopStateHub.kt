@@ -216,24 +216,4 @@ class SnoopStateHub(
         )
     }
 
-    // --- SIMULATION HELPERS FOR TESTING ---
-    fun simulateCall(status: CallStatus, name: String = "Jane Doe") {
-        callObserver.setSimulatedCall(status, name)
-    }
-
-    fun simulateMusic(isPlaying: Boolean, title: String = "Blinding Lights", artist: String = "The Weeknd") {
-        SnoopNotificationListenerService.updateMediaSessions(context)
-    }
-
-    fun startTimer(seconds: Int = 180, label: String = "Tea Timer") {
-        timerStopwatchEngine.startTimer(seconds, label)
-    }
-
-    fun startStopwatch() {
-        timerStopwatchEngine.startStopwatch()
-    }
-
-    fun toggleFlashlight() {
-        systemControlsManager.toggleFlashlight()
-    }
 }
