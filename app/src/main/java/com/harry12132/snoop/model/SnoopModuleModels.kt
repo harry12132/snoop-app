@@ -66,10 +66,10 @@ data class StopwatchState(
 )
 
 data class NavigationState(
-    val appName: String = "Maps",
-    val instruction: String = "Head North",
-    val distanceText: String = "500 m",
-    val etaText: String = "12 min",
+    val appName: String = "",
+    val instruction: String = "",
+    val distanceText: String = "",
+    val etaText: String = "",
     val iconBitmap: Bitmap? = null
 )
 
@@ -100,7 +100,7 @@ data class BatteryState(
 
 data class DownloadState(
     val downloadId: String = "",
-    val fileName: String = "Downloading file",
+    val fileName: String = "",
     val percentage: Int = 0,
     val bytesDownloaded: Long = 0L,
     val totalBytes: Long = 0L,
