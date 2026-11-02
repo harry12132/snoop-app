@@ -70,6 +70,9 @@ class SnoopOverlayView(
     private var stopwatchValueView: TextView? = null
     private var callStatusView: TextView? = null
     private var musicProgressView: ProgressBar? = null
+    private var musicPlayPauseView: ApplePlayPauseIconView? = null
+    private var musicSkipPrevView: AppleSkipIconView? = null
+    private var musicSkipNextView: AppleSkipIconView? = null
 
     private val gestureDetector = GestureDetector(
         context,
@@ -172,7 +175,8 @@ class SnoopOverlayView(
                     previous.download.percentage != state.download.percentage ||
                     previous.download.isCompleted != state.download.isCompleted
                 ModuleType.SYSTEM_CONTROL -> previous.systemControl.isFlashlightOn != state.systemControl.isFlashlightOn ||
-                    previous.systemControl.ringerMode != state.systemControl.ringerMode
+                    previous.systemControl.ringerMode != state.systemControl.ringerMode ||
+                    previous.systemControl.volumePercent != state.systemControl.volumePercent
                 ModuleType.IDLE -> false
             }
 
@@ -206,6 +210,13 @@ class SnoopOverlayView(
                 }
             }
             ModuleType.MUSIC -> {
+                musicPlayPauseView?.let { control ->
+                    control.isPlaying = state.music.isPlaying
+                    control.setOnClickListener { state.music.onPlayPause?.invoke() }
+                    control.invalidate()
+                }
+                musicSkipPrevView?.setOnClickListener { state.music.onSkipPrev?.invoke() }
+                musicSkipNextView?.setOnClickListener { state.music.onSkipNext?.invoke() }
                 val duration = state.music.durationMs
                 musicProgressView?.progress = if (duration > 0L) {
                     ((state.music.positionMs * 100L) / duration).toInt().coerceIn(0, 100)
@@ -279,6 +290,9 @@ class SnoopOverlayView(
         stopwatchValueView = null
         callStatusView = null
         musicProgressView = null
+        musicPlayPauseView = null
+        musicSkipPrevView = null
+        musicSkipNextView = null
         removeAllViews()
         if (isExpanded) {
             renderExpandedView()
@@ -540,6 +554,8 @@ class SnoopOverlayView(
             setOnClickListener { music.onSkipPrev?.invoke() }
         }
 
+        musicSkipPrevView = prevIcon
+
         val playPauseIcon = ApplePlayPauseIconView(context, isPlaying = music.isPlaying).apply {
             layoutParams = LinearLayout.LayoutParams(dp(36), dp(36)).apply {
                 setMargins(dp(16), 0, dp(16), 0)
@@ -547,12 +563,16 @@ class SnoopOverlayView(
             setOnClickListener { music.onPlayPause?.invoke() }
         }
 
+        musicPlayPauseView = playPauseIcon
+
         val nextIcon = AppleSkipIconView(context, isNext = true).apply {
             layoutParams = LinearLayout.LayoutParams(dp(28), dp(28)).apply {
                 setMargins(dp(16), 0, dp(16), 0)
             }
             setOnClickListener { music.onSkipNext?.invoke() }
         }
+
+        musicSkipNextView = nextIcon
 
         controlsRow.addView(prevIcon)
         controlsRow.addView(playPauseIcon)
@@ -765,6 +785,12 @@ class SnoopOverlayView(
             setTextColor(if (bat.isLowBattery) Color.rgb(255, 59, 48) else Color.rgb(52, 199, 89))
             textSize = 22f
             typeface = Typeface.DEFAULT_BOLD
+        }
+
+        val volumeText = TextView(context).apply {
+            text = "Media volume: ${sysVolumePlaceholder}"
+            setTextColor(Color.rgb(174, 174, 178))
+            textSize = 12f
         }
 
         val statusText = TextView(context).apply {
