@@ -85,6 +85,7 @@ class MainActivity : ComponentActivity() {
     private var hasNotifListenerPermission by mutableStateOf(false)
     private var hasPhonePermission by mutableStateOf(false)
     private var hasNotificationPermission by mutableStateOf(false)
+    private var hasCameraPermission by mutableStateOf(false)
 
     private val requestPhonePermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
@@ -95,6 +96,11 @@ class MainActivity : ComponentActivity() {
     private val requestNotificationPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
             hasNotificationPermission = isGranted
+        }
+
+    private val requestCameraPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+            hasCameraPermission = isGranted
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -111,12 +117,14 @@ class MainActivity : ComponentActivity() {
                     hasNotifListenerPermission = hasNotifListenerPermission,
                     hasPhonePermission = hasPhonePermission,
                     hasNotificationPermission = hasNotificationPermission,
+                    hasCameraPermission = hasCameraPermission,
                     onEnableOverlayPermission = ::openOverlayPermissionSettings,
                     onEnableNotifListenerPermission = ::openNotifListenerPermissionSettings,
                     onRequestPhonePermission = {
                         requestPhonePermissionLauncher.launch(android.Manifest.permission.READ_PHONE_STATE)
                     },
                     onRequestNotificationPermission = ::requestNotificationPermission,
+                    onRequestCameraPermission = ::requestCameraPermission,
                     onStartService = ::startSnoopService,
                     onStopService = ::stopSnoopService
                 )
@@ -142,12 +150,20 @@ class MainActivity : ComponentActivity() {
         hasNotifListenerPermission = isNotificationListenerEnabled(this)
         hasNotificationPermission = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
             ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+        hasCameraPermission = ContextCompat.checkSelfPermission(
+            this,
+            android.Manifest.permission.CAMERA
+        ) == PackageManager.PERMISSION_GRANTED
     }
 
     private fun requestNotificationPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             requestNotificationPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
         }
+    }
+
+    private fun requestCameraPermission() {
+        requestCameraPermissionLauncher.launch(android.Manifest.permission.CAMERA)
     }
 
     private fun isNotificationListenerEnabled(context: Context): Boolean {
@@ -207,10 +223,12 @@ private fun MainContent(
     hasNotifListenerPermission: Boolean,
     hasPhonePermission: Boolean,
     hasNotificationPermission: Boolean,
+    hasCameraPermission: Boolean,
     onEnableOverlayPermission: () -> Unit,
     onEnableNotifListenerPermission: () -> Unit,
     onRequestPhonePermission: () -> Unit,
     onRequestNotificationPermission: () -> Unit,
+    onRequestCameraPermission: () -> Unit,
     onStartService: () -> Unit,
     onStopService: () -> Unit
 ) {
@@ -303,10 +321,12 @@ private fun MainContent(
                         hasNotifListenerPermission = hasNotifListenerPermission,
                         hasPhonePermission = hasPhonePermission,
                         hasNotificationPermission = hasNotificationPermission,
+                        hasCameraPermission = hasCameraPermission,
                         onEnableOverlayPermission = onEnableOverlayPermission,
                         onEnableNotifListenerPermission = onEnableNotifListenerPermission,
                         onRequestPhonePermission = onRequestPhonePermission,
                         onRequestNotificationPermission = onRequestNotificationPermission,
+                        onRequestCameraPermission = onRequestCameraPermission,
                         onStartService = onStartService,
                         onStopService = onStopService
                     )
@@ -324,10 +344,12 @@ private fun OverviewTab(
     hasNotifListenerPermission: Boolean,
     hasPhonePermission: Boolean,
     hasNotificationPermission: Boolean,
+    hasCameraPermission: Boolean,
     onEnableOverlayPermission: () -> Unit,
     onEnableNotifListenerPermission: () -> Unit,
     onRequestPhonePermission: () -> Unit,
     onRequestNotificationPermission: () -> Unit,
+    onRequestCameraPermission: () -> Unit,
     onStartService: () -> Unit,
     onStopService: () -> Unit
 ) {
@@ -428,6 +450,15 @@ private fun OverviewTab(
             subtitle = "Allows Android to show Snoop's ongoing service notification.",
             isGranted = hasNotificationPermission,
             onGrant = onRequestNotificationPermission
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        PermissionCard(
+            title = "Camera access",
+            subtitle = "Required for the flashlight toggle. Snoop does not capture camera images.",
+            isGranted = hasCameraPermission,
+            onGrant = onRequestCameraPermission
         )
     }
 }
