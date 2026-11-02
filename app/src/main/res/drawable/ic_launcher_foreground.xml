@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Outer Pill Drop Shadow / Border Glow -->
+    <path
+        android:fillColor="#15000000"
+        android:pathData="M24,40 h60 a16,16 0 0 1 16,16 a16,16 0 0 1 -16,16 h-60 a16,16 0 0 1 -16,-16 a16,16 0 0 1 16,-16 Z" />
+
+    <!-- Center Black Pill Capsule -->
+    <path
+        android:fillColor="#000000"
+        android:pathData="M26,42 h56 a14,14 0 0 1 14,14 a14,14 0 0 1 -14,14 h-56 a14,14 0 0 1 -14,-14 a14,14 0 0 1 14,-14 Z" />
+
+    <!-- Left Eye White (Large Vertical Oval) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M47,46 a6,10 0 1 1 0,20 a6,10 0 1 1 0,-20 Z" />
+    <!-- Left Pupil (Dark Pupil) -->
+    <path
+        android:fillColor="#0B0B0E"
+        android:pathData="M48.5,50.5 a3.5,5 0 1 1 0,10 a3.5,5 0 1 1 0,-10 Z" />
+    <!-- Left Eye Glossy Highlight -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M49.5,51.5 a1.2,1.8 0 1 1 0,3.6 a1.2,1.8 0 1 1 0,-3.6 Z" />
+
+    <!-- Right Eye White (Large Vertical Oval) -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M61,46 a6,10 0 1 1 0,20 a6,10 0 1 1 0,-20 Z" />
+    <!-- Right Pupil (Dark Pupil) -->
+    <path
+        android:fillColor="#0B0B0E"
+        android:pathData="M62.5,50.5 a3.5,5 0 1 1 0,10 a3.5,5 0 1 1 0,-10 Z" />
+    <!-- Right Eye Glossy Highlight -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M63.5,51.5 a1.2,1.8 0 1 1 0,3.6 a1.2,1.8 0 1 1 0,-3.6 Z" />
+</vector>

@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Значок острова в духе промо-ролика 1.6: простая фигура на сетке 24×24 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M12,3a9,9 0,0 0,-9 9v3h2.4v-3a6.6,6.6 0,0 1,13.2 0v3H21v-3a9,9 0,0 0,-9 -9z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M4.5,13h1a2,2 0,0 1,2 2v4a2,2 0,0 1,-2 2h-1a2,2 0,0 1,-2 -2v-4a2,2 0,0 1,2 -2z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M18.5,13h1a2,2 0,0 1,2 2v4a2,2 0,0 1,-2 2h-1a2,2 0,0 1,-2 -2v-4a2,2 0,0 1,2 -2z" />
+</vector>
