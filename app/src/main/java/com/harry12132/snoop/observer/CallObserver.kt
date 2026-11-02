@@ -65,6 +65,10 @@ class CallObserver(private val context: Context) {
         } catch (_: Exception) {
         }
         durationJob?.cancel()
+        durationJob = null
+        legacyListener = null
+        api31Callback = null
+        _callState.value = null
     }
 
     @RequiresApi(Build.VERSION_CODES.S)
