@@ -4,8 +4,6 @@ import android.content.Context
 import android.graphics.PixelFormat
 import android.view.Gravity
 import android.view.WindowManager
-import android.view.WindowManager.LayoutParams
-import android.view.View
 
 /**
  * Owns the single overlay window and guarantees it is attached/removed once.
@@ -20,27 +18,20 @@ class SnoopOverlayController(context: Context) {
     fun show() {
         if (overlayView != null) return
 
-        val statusBarHeight = appContext.resources.getIdentifier(
-            "status_bar_height",
-            "dimen",
-            "android"
-        ).takeIf { it != 0 }?.let { appContext.resources.getDimensionPixelSize(it) }
-            ?: (24 * appContext.resources.displayMetrics.density).toInt()
-
-        val width = (126 * appContext.resources.displayMetrics.density).toInt()
-        val height = (36 * appContext.resources.displayMetrics.density).toInt()
-
-        val params = LayoutParams(
-            width,
-            height,
-            LayoutParams.TYPE_APPLICATION_OVERLAY,
-            LayoutParams.FLAG_NOT_FOCUSABLE or LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+        val density = appContext.resources.displayMetrics.density
+        val params = WindowManager.LayoutParams(
+            (126 * density).toInt(),
+            (36 * density).toInt(),
+            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-            y = statusBarHeight + (6 * appContext.resources.displayMetrics.density).toInt()
-            horizontalMargin = 0f
-            verticalMargin = 0f
+            // Start at the physical top edge. The system status bar may still
+            // be layered above application overlays on some Android builds.
+            y = 0
         }
 
         val view = SnoopOverlayView(appContext, windowManager, params)
