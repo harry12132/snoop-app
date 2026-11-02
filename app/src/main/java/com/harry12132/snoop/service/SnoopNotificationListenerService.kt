@@ -45,25 +45,17 @@ class SnoopNotificationListenerService : NotificationListenerService() {
     }
 
     override fun onNotificationRemoved(sbn: StatusBarNotification?) {
-        sbn ?: return
-        val key = sbn.key
-        if (latestNotificationFlow.value?.id == key) {
-            _latestNotificationFlow.value = null
-        }
-        if (latestNavigationFlow.value?.appName == getAppName(sbn.packageName)) {
-            _latestNavigationFlow.value = null
-        }
-        if (latestDownloadFlow.value?.downloadId == key) {
-            _latestDownloadFlow.value = null
-        }
+        if (sbn == null) return
+        syncActiveNotifications()
     }
 
     private fun syncActiveNotifications() {
         try {
-            val active = activeNotifications ?: return
-            for (sbn in active) {
-                processNotification(sbn)
-            }
+            val active = activeNotifications ?: emptyArray()
+            _latestNavigationFlow.value = null
+            _latestNotificationFlow.value = null
+            _latestDownloadFlow.value = null
+            active.sortedBy { it.postTime }.forEach(::processNotification)
         } catch (_: Exception) {
         }
     }
