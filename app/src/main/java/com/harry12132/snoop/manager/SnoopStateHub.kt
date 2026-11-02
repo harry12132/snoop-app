@@ -177,7 +177,7 @@ class SnoopStateHub(
         if (settings.enableCalls && activeCall != null) available.add(ModuleType.CALL)
         if (settings.enableTimers && (timer.isRunning || timer.isCompleted)) available.add(ModuleType.TIMER)
         if (settings.enableStopwatches && stopwatch.isRunning) available.add(ModuleType.STOPWATCH)
-        if (settings.enableNavigation && nav.instruction.isNotBlank() && nav.distanceText != "Navigating") available.add(ModuleType.NAVIGATION)
+        if (settings.enableNavigation && nav.instruction.isNotBlank()) available.add(ModuleType.NAVIGATION)
         if (settings.enableMusic && (music.isPlaying || music.title != "No Track")) available.add(ModuleType.MUSIC)
         if (settings.enableNotifications && notif.title.isNotBlank()) available.add(ModuleType.NOTIFICATION)
         if (settings.enableDownloads && download.fileName.isNotBlank() && !download.isCompleted) available.add(ModuleType.DOWNLOAD)
