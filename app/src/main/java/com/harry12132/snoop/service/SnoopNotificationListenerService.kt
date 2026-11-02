@@ -32,6 +32,7 @@ class SnoopNotificationListenerService : NotificationListenerService() {
 
     override fun onListenerDisconnected() {
         instance = null
+        latestMediaNotificationKey = null
         _latestMusicFlow.value = null
         _latestNavigationFlow.value = null
         _latestNotificationFlow.value = null
@@ -52,6 +53,8 @@ class SnoopNotificationListenerService : NotificationListenerService() {
     private fun syncActiveNotifications() {
         try {
             val active = activeNotifications ?: emptyArray()
+            latestMediaNotificationKey = null
+            _latestMusicFlow.value = null
             _latestNavigationFlow.value = null
             _latestNotificationFlow.value = null
             _latestDownloadFlow.value = null
@@ -169,6 +172,7 @@ class SnoopNotificationListenerService : NotificationListenerService() {
         artist: String,
         extras: Bundle
     ) {
+        latestMediaNotificationKey = sbn.key
         val artwork = getNotificationLargeIcon(extras, sbn.packageName)
         val currentMusic = _latestMusicFlow.value ?: MusicState()
 
@@ -209,6 +213,7 @@ class SnoopNotificationListenerService : NotificationListenerService() {
 
     companion object {
         private var instance: SnoopNotificationListenerService? = null
+        private var latestMediaNotificationKey: String? = null
 
         private val _latestMusicFlow = MutableStateFlow<MusicState?>(null)
         val latestMusicFlow: StateFlow<MusicState?> = _latestMusicFlow
@@ -230,7 +235,9 @@ class SnoopNotificationListenerService : NotificationListenerService() {
                 val componentName = android.content.ComponentName(context, SnoopNotificationListenerService::class.java)
                 val controllers = mediaManager?.getActiveSessions(componentName)
                 if (controllers.isNullOrEmpty()) {
-                    _latestMusicFlow.value = null
+                    if (latestMediaNotificationKey == null) {
+                        _latestMusicFlow.value = null
+                    }
                     return
                 }
                 val controller = controllers.firstOrNull {
