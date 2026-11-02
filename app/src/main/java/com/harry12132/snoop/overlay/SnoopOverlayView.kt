@@ -5,7 +5,6 @@ import android.content.Context
 import android.graphics.Color
 import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
-import android.view.View
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.FrameLayout
 import android.widget.LinearLayout
@@ -46,18 +45,6 @@ class SnoopOverlayView(
         letterSpacing = 0.04f
     }
 
-    private val detail = TextView(context).apply {
-        text = "Your glanceable space"
-        setTextColor(Color.rgb(178, 184, 192))
-        textSize = 13f
-    }
-
-    private val hint = TextView(context).apply {
-        text = "Tap to collapse"
-        setTextColor(Color.rgb(125, 132, 142))
-        textSize = 11f
-    }
-
     init {
         background = pillBackground
         elevation = dp(12).toFloat()
@@ -71,6 +58,11 @@ class SnoopOverlayView(
         )
 
         setOnClickListener { toggleExpanded() }
+    }
+
+    fun dispose() {
+        animator?.cancel()
+        animator = null
     }
 
     fun toggleExpanded() {
@@ -101,10 +93,14 @@ class SnoopOverlayView(
                 layoutParams = params
                 pillBackground.cornerRadius = startRadius + (endRadius - startRadius) * progress
                 invalidate()
-                windowManager.updateViewLayout(this@SnoopOverlayView, windowParams.apply {
-                    width = params.width
-                    height = params.height
-                })
+                try {
+                    windowManager.updateViewLayout(this@SnoopOverlayView, windowParams.apply {
+                        width = params.width
+                        height = params.height
+                    })
+                } catch (_: IllegalArgumentException) {
+                    animator?.cancel()
+                }
             }
             start()
         }
