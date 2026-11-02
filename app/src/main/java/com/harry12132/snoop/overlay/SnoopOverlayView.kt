@@ -138,6 +138,16 @@ class SnoopOverlayView(
             mainPillBackground.setStroke(0, Color.TRANSPARENT)
         }
         mainPillBackground.cornerRadius = if (isExpanded) dp(settings.cornerRadiusDp).toFloat() else dp(settings.collapsedHeightDp / 2).toFloat()
+
+        val targetWidth = dp(if (isExpanded) settings.expandedWidthDp else settings.collapsedWidthDp)
+        val targetHeight = dp(if (isExpanded) settings.expandedHeightDp else settings.collapsedHeightDp)
+        windowParams.width = targetWidth
+        windowParams.height = targetHeight
+        layoutParams?.let { params ->
+            params.width = targetWidth
+            params.height = targetHeight
+            layoutParams = params
+        }
         invalidate()
     }
 
