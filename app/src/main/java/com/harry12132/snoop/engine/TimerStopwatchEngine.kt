@@ -44,7 +44,10 @@ class TimerStopwatchEngine(context: Context) {
 
     init {
         if (_timerState.value.isRunning) runTimerLoop()
-        if (_stopwatchState.value.isRunning) runStopwatchLoop()
+        if (_stopwatchState.value.isRunning) {
+            persistStopwatch(true)
+            runStopwatchLoop()
+        }
     }
 
     private fun timerState(
@@ -234,7 +237,6 @@ class TimerStopwatchEngine(context: Context) {
 
         if (savedRunning) {
             stopwatchStartElapsedMs = SystemClock.elapsedRealtime()
-            persistStopwatch(true)
         }
 
         return stopwatchState(accumulatedStopwatchMs, savedRunning, laps)
@@ -293,6 +295,11 @@ class TimerStopwatchEngine(context: Context) {
     }
 
     private fun persistStopwatch(running: Boolean) {
+        if (running) {
+            val now = SystemClock.elapsedRealtime()
+            accumulatedStopwatchMs += (now - stopwatchStartElapsedMs).coerceAtLeast(0L)
+            stopwatchStartElapsedMs = now
+        }
         val state = _stopwatchState.value
         val elapsed = if (running) accumulatedStopwatchMs else state.elapsedMillis
         prefs.edit()
