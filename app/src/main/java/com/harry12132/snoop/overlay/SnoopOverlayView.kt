@@ -789,6 +789,12 @@ class SnoopOverlayView(
         container.addView(titleText)
         container.addView(bodyText)
 
+        if (notif.onOpen != null) {
+            container.addView(createAppleButton("Open") {
+                notif.onOpen?.invoke()
+            })
+        }
+
         notif.actions.take(2).forEach { action ->
             container.addView(createAppleButton(action.title) {
                 try {
