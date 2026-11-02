@@ -87,6 +87,7 @@ class MainActivity : ComponentActivity() {
     private val requestPhonePermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
             hasPhonePermission = isGranted
+            SnoopApp.getInstance().stateHub.refreshCallPermission()
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
