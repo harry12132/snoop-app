@@ -11,9 +11,9 @@ import android.view.View
 import android.view.animation.LinearInterpolator
 import kotlin.math.roundToInt
 
-class EqualizerView(context: Context) : View(context) {
+class EqualizerView(context: Context, private var isPlaying: Boolean = true) : View(context) {
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.rgb(30, 215, 96) // Spotify/Apple Music green
+        color = Color.rgb(30, 215, 96)
         style = Paint.Style.FILL
     }
 
@@ -21,7 +21,23 @@ class EqualizerView(context: Context) : View(context) {
     private var animator: ValueAnimator? = null
 
     init {
-        startAnimation()
+        if (isPlaying) startAnimation()
+    }
+
+    fun setPlaying(playing: Boolean) {
+        if (isPlaying == playing) return
+        isPlaying = playing
+        if (playing && isAttachedToWindow) {
+            startAnimation()
+        } else {
+            animator?.cancel()
+            animator = null
+            barHeights[0] = 0.4f
+            barHeights[1] = 0.65f
+            barHeights[2] = 0.5f
+            barHeights[3] = 0.75f
+            invalidate()
+        }
     }
 
     fun setBarColor(color: Int) {
@@ -30,6 +46,8 @@ class EqualizerView(context: Context) : View(context) {
     }
 
     private fun startAnimation() {
+        if (animator?.isRunning == true || !isPlaying) return
+        animator?.cancel()
         animator = ValueAnimator.ofFloat(0f, 1f).apply {
             duration = 600L
             repeatCount = ValueAnimator.INFINITE
@@ -47,8 +65,14 @@ class EqualizerView(context: Context) : View(context) {
         }
     }
 
+    override fun onAttachedToWindow() {
+        super.onAttachedToWindow()
+        if (isPlaying) startAnimation()
+    }
+
     override fun onDetachedFromWindow() {
         animator?.cancel()
+        animator = null
         super.onDetachedFromWindow()
     }
 
@@ -65,12 +89,10 @@ class EqualizerView(context: Context) : View(context) {
             val h = totalHeight * barHeights[i]
             val top = totalHeight - h
             val right = left + barWidth
-            val bottom = totalHeight
-            canvas.drawRoundRect(RectF(left, top, right, bottom), barWidth / 2f, barWidth / 2f, paint)
+            canvas.drawRoundRect(RectF(left, top, right, totalHeight), barWidth / 2f, barWidth / 2f, paint)
         }
     }
 }
-
 class ApplePlayPauseIconView(context: Context, var isPlaying: Boolean) : View(context) {
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = Color.WHITE
