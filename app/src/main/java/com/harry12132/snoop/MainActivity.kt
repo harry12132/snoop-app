@@ -532,13 +532,31 @@ private fun CameraPositionTab(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable {
-                                settingsManager.updateSettings { it.copy(cutoutMode = mode) }
+                                settingsManager.updateSettings {
+                                    val alignment = when (mode) {
+                                        CutoutMode.PUNCH_HOLE_LEFT -> com.harry12132.snoop.data.OverlayAlignment.LEFT
+                                        CutoutMode.PUNCH_HOLE_RIGHT -> com.harry12132.snoop.data.OverlayAlignment.RIGHT
+                                        CutoutMode.CUSTOM -> it.alignment
+                                        else -> com.harry12132.snoop.data.OverlayAlignment.CENTER
+                                    }
+                                    it.copy(cutoutMode = mode, alignment = alignment)
+                                }
                             }
                             .padding(vertical = 4.dp)
                     ) {
                         RadioButton(
                             selected = settings.cutoutMode == mode,
-                            onClick = { settingsManager.updateSettings { it.copy(cutoutMode = mode) } },
+                            onClick = {
+                                settingsManager.updateSettings {
+                                    val alignment = when (mode) {
+                                        CutoutMode.PUNCH_HOLE_LEFT -> com.harry12132.snoop.data.OverlayAlignment.LEFT
+                                        CutoutMode.PUNCH_HOLE_RIGHT -> com.harry12132.snoop.data.OverlayAlignment.RIGHT
+                                        CutoutMode.CUSTOM -> it.alignment
+                                        else -> com.harry12132.snoop.data.OverlayAlignment.CENTER
+                                    }
+                                    it.copy(cutoutMode = mode, alignment = alignment)
+                                }
+                            },
                             colors = RadioButtonDefaults.colors(selectedColor = MaterialTheme.colorScheme.primary)
                         )
                         Text(mode.name.replace("_", " "), color = Color.Black, fontSize = 13.sp)
