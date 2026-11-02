@@ -46,6 +46,7 @@ class SnoopStateHub(
     private var userSelectedModuleIndex = 0
 
     fun start() {
+        if (hubJob?.isActive == true) return
         batteryObserver.start()
         callObserver.start()
 
