@@ -60,6 +60,12 @@ class SnoopOverlayView(
     private var initialParamY = 0
 
     private var animator: ValueAnimator? = null
+    private var collapsedTitleView: TextView? = null
+    private var collapsedRightTextView: TextView? = null
+    private var timerValueView: TextView? = null
+    private var stopwatchValueView: TextView? = null
+    private var callStatusView: TextView? = null
+    private var musicProgressView: ProgressBar? = null
 
     private val gestureDetector = GestureDetector(
         context,
@@ -129,8 +135,80 @@ class SnoopOverlayView(
     }
 
     fun updateOverlayState(state: SnoopOverlayState) {
+        val previous = currentState
         currentState = state
-        renderUI()
+
+        val contentChanged = previous.activeModule != state.activeModule ||
+            previous.availableModules != state.availableModules ||
+            when (state.activeModule) {
+                ModuleType.MUSIC -> previous.music.title != state.music.title ||
+                    previous.music.artist != state.music.artist ||
+                    previous.music.artwork !== state.music.artwork ||
+                    previous.music.isPlaying != state.music.isPlaying ||
+                    previous.music.durationMs != state.music.durationMs
+                ModuleType.CALL -> previous.call.callerName != state.call.callerName ||
+                    previous.call.status != state.call.status
+                ModuleType.TIMER -> previous.timer.label != state.timer.label ||
+                    previous.timer.totalSeconds != state.timer.totalSeconds ||
+                    previous.timer.isRunning != state.timer.isRunning ||
+                    previous.timer.isCompleted != state.timer.isCompleted
+                ModuleType.STOPWATCH -> previous.stopwatch.isRunning != state.stopwatch.isRunning ||
+                    previous.stopwatch.laps != state.stopwatch.laps
+                ModuleType.NAVIGATION -> previous.navigation.instruction != state.navigation.instruction ||
+                    previous.navigation.distanceText != state.navigation.distanceText ||
+                    previous.navigation.etaText != state.navigation.etaText
+                ModuleType.NOTIFICATION -> previous.notification.id != state.notification.id ||
+                    previous.notification.title != state.notification.title ||
+                    previous.notification.text != state.notification.text ||
+                    previous.notification.actions.size != state.notification.actions.size
+                ModuleType.BATTERY -> previous.battery.percentage != state.battery.percentage ||
+                    previous.battery.isCharging != state.battery.isCharging ||
+                    previous.battery.plugType != state.battery.plugType
+                ModuleType.DOWNLOAD -> previous.download.fileName != state.download.fileName ||
+                    previous.download.percentage != state.download.percentage ||
+                    previous.download.isCompleted != state.download.isCompleted
+                ModuleType.SYSTEM_CONTROL -> previous.systemControl.isFlashlightOn != state.systemControl.isFlashlightOn ||
+                    previous.systemControl.ringerMode != state.systemControl.ringerMode
+                ModuleType.IDLE -> false
+            }
+
+        if (contentChanged) {
+            renderUI()
+            return
+        }
+
+        collapsedTitleView?.text = getCollapsedTitle()
+        when (state.activeModule) {
+            ModuleType.TIMER -> {
+                val text = String.format("%02d:%02d", state.timer.remainingSeconds / 60, state.timer.remainingSeconds % 60)
+                timerValueView?.text = if (state.timer.isCompleted) "00:00" else text
+                collapsedRightTextView?.text = text
+            }
+            ModuleType.STOPWATCH -> {
+                val totalSecs = state.stopwatch.elapsedMillis / 1000
+                val millis = (state.stopwatch.elapsedMillis % 1000) / 10
+                val text = String.format("%02d:%02d.%02d", totalSecs / 60, totalSecs % 60, millis)
+                stopwatchValueView?.text = text
+                collapsedRightTextView?.text = text
+            }
+            ModuleType.CALL -> {
+                val mins = state.call.durationSeconds / 60
+                val secs = state.call.durationSeconds % 60
+                callStatusView?.text = when (state.call.status) {
+                    CallStatus.INCOMING -> "Incoming Call"
+                    CallStatus.OUTGOING -> "Calling..."
+                    CallStatus.ACTIVE -> "Active Call • " + String.format("%02d:%02d", mins, secs)
+                    CallStatus.ENDED -> "Call Ended"
+                }
+            }
+            ModuleType.MUSIC -> {
+                val duration = state.music.durationMs
+                musicProgressView?.progress = if (duration > 0L) {
+                    ((state.music.positionMs * 100L) / duration).toInt().coerceIn(0, 100)
+                } else 0
+            }
+            else -> Unit
+        }
     }
 
     fun dispose() {
@@ -186,6 +264,12 @@ class SnoopOverlayView(
     }
 
     private fun renderUI() {
+        collapsedTitleView = null
+        collapsedRightTextView = null
+        timerValueView = null
+        stopwatchValueView = null
+        callStatusView = null
+        musicProgressView = null
         removeAllViews()
         if (isExpanded) {
             renderExpandedView()
@@ -218,6 +302,8 @@ class SnoopOverlayView(
 
         // Right Side: Animated Equalizer or Timer Ring or Battery
         val rightView = buildCollapsedRightElement()
+        collapsedTitleView = middleText
+        collapsedRightTextView = rightView as? TextView
 
         root.addView(leftView)
         root.addView(middleText)
@@ -278,6 +364,16 @@ class SnoopOverlayView(
                 val rem = currentState.timer.remainingSeconds
                 TextView(context).apply {
                     text = String.format("%02d:%02d", rem / 60, rem % 60)
+                    setTextColor(Color.rgb(255, 159, 10))
+                    textSize = 12f
+                    typeface = Typeface.DEFAULT_BOLD
+                }
+            }
+            ModuleType.STOPWATCH -> {
+                val totalSecs = currentState.stopwatch.elapsedMillis / 1000
+                val millis = (currentState.stopwatch.elapsedMillis % 1000) / 10
+                TextView(context).apply {
+                    text = String.format("%02d:%02d.%02d", totalSecs / 60, totalSecs % 60, millis)
                     setTextColor(Color.rgb(255, 159, 10))
                     textSize = 12f
                     typeface = Typeface.DEFAULT_BOLD
@@ -409,7 +505,7 @@ class SnoopOverlayView(
 
         // Progress Bar
         val progressBar = ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal).apply {
-            val progressPct = if (music.durationMs > 0) ((music.positionMs * 100) / music.durationMs).toInt() else 35
+            val progressPct = if (music.durationMs > 0) ((music.positionMs * 100) / music.durationMs).toInt() else 0
             progress = progressPct
             max = 100
             layoutParams = LinearLayout.LayoutParams(
@@ -419,6 +515,8 @@ class SnoopOverlayView(
                 setMargins(0, dp(12), 0, dp(12))
             }
         }
+
+        musicProgressView = progressBar
 
         // Apple Controls Row
         val controlsRow = LinearLayout(context).apply {
@@ -482,6 +580,8 @@ class SnoopOverlayView(
             gravity = Gravity.CENTER_HORIZONTAL
         }
 
+        callStatusView = statusText
+
         val guidanceText = TextView(context).apply {
             text = when (call.status) {
                 CallStatus.INCOMING -> "Answer or decline using your phone's call controls."
@@ -515,6 +615,8 @@ class SnoopOverlayView(
             typeface = Typeface.DEFAULT_BOLD
             gravity = Gravity.CENTER_HORIZONTAL
         }
+
+        timerValueView = timerText
 
         val labelText = TextView(context).apply {
             text = timer.label
@@ -564,6 +666,8 @@ class SnoopOverlayView(
             typeface = Typeface.DEFAULT_BOLD
             gravity = Gravity.CENTER_HORIZONTAL
         }
+
+        stopwatchValueView = swText
 
         val actionsRow = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
