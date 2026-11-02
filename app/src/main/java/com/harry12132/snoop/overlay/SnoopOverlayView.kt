@@ -740,7 +740,7 @@ class SnoopOverlayView(
                     val lapNumber = sw.laps.size - index
                     "Lap $lapNumber  " + String.format("%02d:%02d.%02d", lapTime / 60000, (lapTime / 1000) % 60, (lapTime % 1000) / 10)
                 }
-                text = recentLaps.joinToString("\\n")
+                text = recentLaps.joinToString("\n")
                 setTextColor(Color.rgb(174, 174, 178))
                 textSize = 11f
                 setPadding(0, dp(8), 0, 0)
