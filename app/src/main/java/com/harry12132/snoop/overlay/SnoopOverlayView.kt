@@ -628,6 +628,20 @@ class SnoopOverlayView(
 
         container.addView(titleText)
         container.addView(bodyText)
+
+        notif.actions.take(2).forEach { action ->
+            container.addView(createAppleButton(action.title) {
+                try {
+                    action.intent?.send()
+                    action.onClick?.invoke()
+                } catch (_: android.app.PendingIntent.CanceledException) {
+                    // The source app may have withdrawn this action.
+                }
+            })
+        }
+        container.addView(createAppleButton("Dismiss") {
+            notif.onDismiss?.invoke()
+        })
     }
 
     private fun buildBatteryViewExpanded(container: LinearLayout) {
