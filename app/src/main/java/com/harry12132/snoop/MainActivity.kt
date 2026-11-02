@@ -121,6 +121,7 @@ class MainActivity : ComponentActivity() {
 
     private fun refreshPermissions() {
         hasOverlayPermission = Settings.canDrawOverlays(this)
+        SnoopApp.getInstance().stateHub.refreshCallPermission()
         hasNotifListenerPermission = isNotificationListenerEnabled(this)
         hasPhonePermission = ContextCompat.checkSelfPermission(
             this,
