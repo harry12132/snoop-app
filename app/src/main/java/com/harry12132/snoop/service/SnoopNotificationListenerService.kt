@@ -31,6 +31,10 @@ class SnoopNotificationListenerService : NotificationListenerService() {
 
     override fun onListenerDisconnected() {
         instance = null
+        _latestMusicFlow.value = null
+        _latestNavigationFlow.value = null
+        _latestNotificationFlow.value = null
+        _latestDownloadFlow.value = null
         super.onListenerDisconnected()
     }
 
@@ -115,6 +119,7 @@ class SnoopNotificationListenerService : NotificationListenerService() {
 
         if (isMediaCategory) {
             updateMediaStateFromNotification(sbn, title, text, extras)
+            return
         }
 
         // General Notification
@@ -215,8 +220,14 @@ class SnoopNotificationListenerService : NotificationListenerService() {
                 val mediaManager = context.getSystemService(Context.MEDIA_SESSION_SERVICE) as? MediaSessionManager
                 val componentName = android.content.ComponentName(context, SnoopNotificationListenerService::class.java)
                 val controllers = mediaManager?.getActiveSessions(componentName)
-                if (!controllers.isNullOrEmpty()) {
-                    val controller = controllers[0]
+                if (controllers.isNullOrEmpty()) {
+                    _latestMusicFlow.value = null
+                    return
+                }
+                val controller = controllers.firstOrNull {
+                    it.playbackState?.state == PlaybackState.STATE_PLAYING
+                } ?: controllers.first()
+                run {
                     val metadata = controller.metadata
                     val playbackState = controller.playbackState
 
@@ -239,8 +250,11 @@ class SnoopNotificationListenerService : NotificationListenerService() {
                         positionMs = pos,
                         packageName = controller.packageName,
                         onPlayPause = {
-                            if (isPlaying) controller.transportControls.pause()
-                            else controller.transportControls.play()
+                            if (controller.playbackState?.state == PlaybackState.STATE_PLAYING) {
+                                controller.transportControls.pause()
+                            } else {
+                                controller.transportControls.play()
+                            }
                         },
                         onSkipNext = { controller.transportControls.skipToNext() },
                         onSkipPrev = { controller.transportControls.skipToPrevious() }
