@@ -175,12 +175,20 @@ class SnoopNotificationListenerService : NotificationListenerService() {
         latestMediaNotificationKey = sbn.key
         val artwork = getNotificationLargeIcon(extras, sbn.packageName)
         val currentMusic = _latestMusicFlow.value ?: MusicState()
+        val actionLabels = sbn.notification.actions
+            ?.mapNotNull { it.title?.toString()?.lowercase() }
+            .orEmpty()
+        val isPlaying = when {
+            actionLabels.any { "pause" in it } -> true
+            actionLabels.any { "play" in it } -> false
+            else -> currentMusic.isPlaying
+        }
 
         _latestMusicFlow.value = currentMusic.copy(
             title = title.ifBlank { "Playing Media" },
             artist = artist.ifBlank { getAppName(sbn.packageName) },
             artwork = artwork ?: currentMusic.artwork,
-            isPlaying = true,
+            isPlaying = isPlaying,
             packageName = sbn.packageName
         )
     }
