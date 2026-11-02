@@ -672,7 +672,7 @@ private fun FeaturesTab(
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text("Quick tools", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                Text("Start an activity and it will appear in the floating island.", color = Color(0xFF8E8E93), fontSize = 12.sp)
+                Text("With the overlay running, started activities appear in the floating island.", color = Color(0xFF8E8E93), fontSize = 12.sp)
                 Spacer(modifier = Modifier.height(10.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(
