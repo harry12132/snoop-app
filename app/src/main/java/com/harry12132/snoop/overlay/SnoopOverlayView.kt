@@ -13,7 +13,7 @@ import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
 import android.view.WindowManager
-import android.view.animation.OvershootInterpolator
+import android.view.animation.DecelerateInterpolator
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -273,7 +273,7 @@ class SnoopOverlayView(
 
         animator = ValueAnimator.ofFloat(0f, 1f).apply {
             duration = 340L
-            interpolator = OvershootInterpolator(0.7f)
+            interpolator = DecelerateInterpolator(1.8f)
             addUpdateListener { animation ->
                 val progress = animation.animatedValue as Float
                 val params = layoutParams ?: return@addUpdateListener
