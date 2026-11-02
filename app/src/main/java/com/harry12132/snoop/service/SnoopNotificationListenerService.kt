@@ -184,12 +184,30 @@ class SnoopNotificationListenerService : NotificationListenerService() {
             else -> currentMusic.isPlaying
         }
 
+        val actions = sbn.notification.actions.orEmpty()
+        fun actionIntent(vararg keywords: String): (() -> Unit)? {
+            val action = actions.firstOrNull { item ->
+                val label = item.title?.toString()?.lowercase().orEmpty()
+                keywords.any(label::contains) && item.actionIntent != null
+            } ?: return null
+            return {
+                try {
+                    action.actionIntent.send()
+                } catch (_: PendingIntent.CanceledException) {
+                    // The media app may have replaced its notification.
+                }
+            }
+        }
+
         _latestMusicFlow.value = currentMusic.copy(
             title = title.ifBlank { "Playing Media" },
             artist = artist.ifBlank { getAppName(sbn.packageName) },
             artwork = artwork ?: currentMusic.artwork,
             isPlaying = isPlaying,
-            packageName = sbn.packageName
+            packageName = sbn.packageName,
+            onPlayPause = actionIntent(if (isPlaying) "pause" else "play"),
+            onSkipNext = actionIntent("next", "skip"),
+            onSkipPrev = actionIntent("previous", "back")
         )
     }
 
