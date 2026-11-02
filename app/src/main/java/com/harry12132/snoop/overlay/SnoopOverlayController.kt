@@ -54,7 +54,12 @@ class SnoopOverlayController(
         view.updateSettings(settings)
         view.updateOverlayState(stateHub.overlayState.value)
 
-        windowManager.addView(view, windowParams)
+        try {
+            windowManager.addView(view, windowParams)
+        } catch (error: RuntimeException) {
+            view.dispose()
+            throw error
+        }
         params = windowParams
         overlayView = view
 
