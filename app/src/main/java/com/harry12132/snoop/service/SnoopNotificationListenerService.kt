@@ -124,7 +124,7 @@ class SnoopNotificationListenerService : NotificationListenerService() {
             val appIcon = getNotificationLargeIcon(extras, pkg)
             val actionsList = mutableListOf<NotificationActionItem>()
             notification.actions
-                ?.filter { it.remoteInputs.isNullOrEmpty() }
+                ?.filter { it.actionIntent != null && it.remoteInputs.isNullOrEmpty() }
                 ?.take(2)
                 ?.forEach { act ->
                 actionsList.add(
@@ -144,11 +144,13 @@ class SnoopNotificationListenerService : NotificationListenerService() {
                 text = text,
                 postTime = sbn.postTime,
                 actions = actionsList,
-                onOpen = {
-                    try {
-                        sbn.notification.contentIntent?.send()
-                    } catch (_: PendingIntent.CanceledException) {
-                        // The source app may have withdrawn this notification.
+                onOpen = sbn.notification.contentIntent?.let { contentIntent ->
+                    {
+                        try {
+                            contentIntent.send()
+                        } catch (_: PendingIntent.CanceledException) {
+                            // The source app may have withdrawn this notification.
+                        }
                     }
                 },
                 onDismiss = {
