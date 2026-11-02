@@ -107,7 +107,7 @@ class SnoopOverlayView(
                         }
                         return true
                     }
-                } else if (diffY < -80 && abs(velocityY) > 80) {
+                } else if (currentSettings.enableSwipeGestures && diffY < -80 && abs(velocityY) > 80) {
                     if (isExpanded) {
                         animateTo(false)
                         return true
