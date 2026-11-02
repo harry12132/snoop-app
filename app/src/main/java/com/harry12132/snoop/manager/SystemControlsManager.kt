@@ -110,10 +110,12 @@ class SystemControlsManager(private val context: Context) {
 
     fun toggleRingerMode() {
         try {
-            val nextMode = when (audioManager.ringerMode) {
-                AudioManager.RINGER_MODE_NORMAL -> AudioManager.RINGER_MODE_VIBRATE
-                AudioManager.RINGER_MODE_VIBRATE -> AudioManager.RINGER_MODE_SILENT
-                else -> AudioManager.RINGER_MODE_NORMAL
+            // Avoid requesting Notification Policy Access just to silence the
+            // device. The in-app toggle safely switches Normal and Vibrate.
+            val nextMode = if (audioManager.ringerMode == AudioManager.RINGER_MODE_VIBRATE) {
+                AudioManager.RINGER_MODE_NORMAL
+            } else {
+                AudioManager.RINGER_MODE_VIBRATE
             }
             audioManager.ringerMode = nextMode
             updateState()
