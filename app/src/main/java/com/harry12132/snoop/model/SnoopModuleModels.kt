@@ -88,6 +88,7 @@ data class NotificationState(
     val text: String = "",
     val postTime: Long = System.currentTimeMillis(),
     val actions: List<NotificationActionItem> = emptyList(),
+    val onOpen: (() -> Unit)? = null,
     val onDismiss: (() -> Unit)? = null
 )
 
