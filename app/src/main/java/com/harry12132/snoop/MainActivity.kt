@@ -76,7 +76,6 @@ import androidx.core.content.ContextCompat
 import com.harry12132.snoop.data.CutoutMode
 import com.harry12132.snoop.data.SnoopSettings
 import com.harry12132.snoop.data.SnoopSettingsManager
-import com.harry12132.snoop.model.CallStatus
 import com.harry12132.snoop.service.SnoopOverlayService
 
 class MainActivity : ComponentActivity() {
@@ -242,7 +241,7 @@ private fun MainContent(
             }
 
             // Tabs
-            val tabs = listOf("Overview", "Camera & Pos", "Features", "Simulate")
+            val tabs = listOf("Overview", "Camera & Pos", "Features")
             TabRow(
                 selectedTabIndex = selectedTab,
                 containerColor = Color.Transparent,
@@ -287,7 +286,6 @@ private fun MainContent(
                     )
                     1 -> CameraPositionTab(settingsManager = settingsManager, settings = settings)
                     2 -> FeaturesTab(settingsManager = settingsManager, settings = settings)
-                    3 -> SimulationTab()
                 }
             }
         }
@@ -709,60 +707,5 @@ private fun SliderCard(
                 )
             )
         }
-    }
-}
-
-@Composable
-private fun SimulationTab() {
-    val app = SnoopApp.getInstance()
-    val stateHub = app.stateHub
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-    ) {
-        Text("Simulation Sandbox", color = Color.Black, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-        Text("Trigger simulated events to test live activity cards in real-time", color = Color(0xFF8E8E93), fontSize = 13.sp)
-        Spacer(modifier = Modifier.height(16.dp))
-
-        SimulateButton("Simulate Incoming Call") {
-            stateHub.simulateCall(CallStatus.INCOMING, "Sarah Connor")
-        }
-
-        SimulateButton("Simulate Active Call") {
-            stateHub.simulateCall(CallStatus.ACTIVE, "Sarah Connor")
-        }
-
-        SimulateButton("End Call") {
-            stateHub.simulateCall(CallStatus.ENDED)
-        }
-
-        SimulateButton("Start 3-Minute Timer") {
-            stateHub.startTimer(180, "Tea Timer")
-        }
-
-        SimulateButton("Start Stopwatch") {
-            stateHub.startStopwatch()
-        }
-
-        SimulateButton("Toggle Flashlight") {
-            stateHub.toggleFlashlight()
-        }
-    }
-}
-
-@Composable
-private fun SimulateButton(label: String, onClick: () -> Unit) {
-    Button(
-        onClick = onClick,
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 6.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = Color.White),
-        shape = RoundedCornerShape(12.dp),
-        elevation = ButtonDefaults.buttonElevation(defaultElevation = 1.dp)
-    ) {
-        Text(label, color = Color.Black, fontWeight = FontWeight.SemiBold)
     }
 }
