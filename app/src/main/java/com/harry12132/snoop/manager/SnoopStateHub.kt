@@ -183,9 +183,7 @@ class SnoopStateHub(
         if (settings.enableNotifications && notif.title.isNotBlank()) available.add(ModuleType.NOTIFICATION)
         if (settings.enableDownloads && download.fileName.isNotBlank() && !download.isCompleted) available.add(ModuleType.DOWNLOAD)
         if (settings.enableBattery && (battery.isCharging || battery.isLowBattery)) available.add(ModuleType.BATTERY)
-        if (settings.enableSystemControls && (sysCtrl.isFlashlightOn || sysCtrl.ringerMode != com.harry12132.snoop.model.RingerMode.NORMAL)) {
-            available.add(ModuleType.SYSTEM_CONTROL)
-        }
+        if (settings.enableSystemControls) available.add(ModuleType.SYSTEM_CONTROL)
 
         if (available.isEmpty()) {
             available.add(ModuleType.IDLE)
