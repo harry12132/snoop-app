@@ -152,6 +152,7 @@ class SnoopOverlayView(
                     previous.music.artist != state.music.artist ||
                     previous.music.artwork !== state.music.artwork ||
                     previous.music.isPlaying != state.music.isPlaying ||
+                    previous.music.packageName != state.music.packageName ||
                     previous.music.durationMs != state.music.durationMs
                 ModuleType.CALL -> previous.call.callerName != state.call.callerName ||
                     previous.call.status != state.call.status
@@ -787,12 +788,6 @@ class SnoopOverlayView(
             typeface = Typeface.DEFAULT_BOLD
         }
 
-        val volumeText = TextView(context).apply {
-            text = "Media volume: ${sysVolumePlaceholder}"
-            setTextColor(Color.rgb(174, 174, 178))
-            textSize = 12f
-        }
-
         val statusText = TextView(context).apply {
             text = if (bat.isCharging) "Charging active" else if (bat.isLowBattery) "Low Battery" else "Battery Healthy"
             setTextColor(Color.rgb(174, 174, 178))
@@ -838,6 +833,14 @@ class SnoopOverlayView(
     private fun buildSystemControlViewExpanded(container: LinearLayout) {
         val sys = currentState.systemControl
 
+        val volumeText = TextView(context).apply {
+            text = "Media volume: ${sys.volumePercent}%"
+            setTextColor(Color.rgb(174, 174, 178))
+            textSize = 12f
+            gravity = Gravity.CENTER_HORIZONTAL
+            setPadding(0, 0, 0, dp(10))
+        }
+
         val row = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
@@ -867,6 +870,7 @@ class SnoopOverlayView(
         row.addView(volumeDownBtn)
         row.addView(volumeUpBtn)
 
+        container.addView(volumeText)
         container.addView(row)
     }
 
