@@ -49,6 +49,7 @@ class SnoopStateHub(
         if (hubJob?.isActive == true) return
         batteryObserver.start()
         callObserver.start()
+        systemControlsManager.start()
 
         hubJob = scope.launch {
             launch { observeSettings() }
@@ -72,6 +73,7 @@ class SnoopStateHub(
         hubJob?.cancel()
         batteryObserver.stop()
         callObserver.stop()
+        systemControlsManager.stop()
     }
 
     private suspend fun observeSettings() {
