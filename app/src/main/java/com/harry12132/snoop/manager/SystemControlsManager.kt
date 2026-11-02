@@ -3,6 +3,8 @@ package com.harry12132.snoop.manager
 import android.content.Context
 import android.hardware.camera2.CameraManager
 import android.media.AudioManager
+import android.os.Handler
+import android.os.Looper
 import com.harry12132.snoop.model.RingerMode
 import com.harry12132.snoop.model.SystemControlState
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -19,6 +21,15 @@ class SystemControlsManager(private val context: Context) {
 
     private var cameraId: String? = null
     private var isTorchOn = false
+    private var torchCallbackRegistered = false
+    private val torchCallback = object : CameraManager.TorchCallback() {
+        override fun onTorchModeChanged(cameraId: String, enabled: Boolean) {
+            if (cameraId == this@SystemControlsManager.cameraId) {
+                isTorchOn = enabled
+                updateState()
+            }
+        }
+    }
 
     init {
         try {
@@ -29,6 +40,24 @@ class SystemControlsManager(private val context: Context) {
         } catch (_: Exception) {
         }
         updateState()
+    }
+
+    fun start() {
+        if (torchCallbackRegistered) return
+        try {
+            cameraManager.registerTorchCallback(torchCallback, Handler(Looper.getMainLooper()))
+            torchCallbackRegistered = true
+        } catch (_: Exception) {
+        }
+    }
+
+    fun stop() {
+        if (!torchCallbackRegistered) return
+        try {
+            cameraManager.unregisterTorchCallback(torchCallback)
+        } catch (_: Exception) {
+        }
+        torchCallbackRegistered = false
     }
 
     fun updateState() {
