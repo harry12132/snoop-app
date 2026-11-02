@@ -71,8 +71,6 @@ class SnoopOverlayController(
                 currentParams.gravity = gravityFor(updated.alignment)
                 currentParams.x = dp(updated.offsetXDp, density)
                 currentParams.y = dp(updated.offsetYDp, density)
-                currentParams.width = dp(updated.collapsedWidthDp, density)
-                currentParams.height = dp(updated.collapsedHeightDp, density)
                 windowManager.updateViewLayout(view, currentParams)
             }
         }
