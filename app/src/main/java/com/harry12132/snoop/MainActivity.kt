@@ -664,6 +664,36 @@ private fun FeaturesTab(
         Text("Enable or disable specific features displayed in Snoop", color = Color(0xFF8E8E93), fontSize = 13.sp)
         Spacer(modifier = Modifier.height(16.dp))
 
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            shape = RoundedCornerShape(16.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text("Quick tools", color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Text("Start an activity and it will appear in the floating island.", color = Color(0xFF8E8E93), fontSize = 12.sp)
+                Spacer(modifier = Modifier.height(10.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = { SnoopApp.getInstance().stateHub.startTimer(300, "5-minute timer") },
+                        modifier = Modifier.weight(1f)
+                    ) { Text("5 min timer") }
+                    Button(
+                        onClick = { SnoopApp.getInstance().stateHub.startTimer(600, "10-minute timer") },
+                        modifier = Modifier.weight(1f)
+                    ) { Text("10 min timer") }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Button(
+                    onClick = { SnoopApp.getInstance().stateHub.startStopwatch() },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Start stopwatch") }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
+
         FeatureToggleItem(
             icon = Icons.Default.PlayArrow,
             title = "Music & Live Waveform",
