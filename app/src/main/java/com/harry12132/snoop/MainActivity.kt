@@ -121,12 +121,15 @@ class MainActivity : ComponentActivity() {
 
     private fun refreshPermissions() {
         hasOverlayPermission = Settings.canDrawOverlays(this)
-        SnoopApp.getInstance().stateHub.refreshCallPermission()
-        hasNotifListenerPermission = isNotificationListenerEnabled(this)
-        hasPhonePermission = ContextCompat.checkSelfPermission(
+        val phonePermissionNowGranted = ContextCompat.checkSelfPermission(
             this,
             android.Manifest.permission.READ_PHONE_STATE
         ) == PackageManager.PERMISSION_GRANTED
+        if (phonePermissionNowGranted != hasPhonePermission) {
+            hasPhonePermission = phonePermissionNowGranted
+            SnoopApp.getInstance().stateHub.refreshCallPermission()
+        }
+        hasNotifListenerPermission = isNotificationListenerEnabled(this)
     }
 
     private fun isNotificationListenerEnabled(context: Context): Boolean {
