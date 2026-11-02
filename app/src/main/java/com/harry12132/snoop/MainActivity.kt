@@ -86,6 +86,7 @@ class MainActivity : ComponentActivity() {
     private var hasPhonePermission by mutableStateOf(false)
     private var hasNotificationPermission by mutableStateOf(false)
     private var hasCameraPermission by mutableStateOf(false)
+    private var serviceRunning by mutableStateOf(false)
 
     private val requestPhonePermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
@@ -118,6 +119,7 @@ class MainActivity : ComponentActivity() {
                     hasPhonePermission = hasPhonePermission,
                     hasNotificationPermission = hasNotificationPermission,
                     hasCameraPermission = hasCameraPermission,
+                    serviceRunning = serviceRunning,
                     onEnableOverlayPermission = ::openOverlayPermissionSettings,
                     onEnableNotifListenerPermission = ::openNotifListenerPermissionSettings,
                     onRequestPhonePermission = {
@@ -139,6 +141,7 @@ class MainActivity : ComponentActivity() {
 
     private fun refreshPermissions() {
         hasOverlayPermission = Settings.canDrawOverlays(this)
+        serviceRunning = SnoopOverlayService.isRunning()
         val phonePermissionNowGranted = ContextCompat.checkSelfPermission(
             this,
             android.Manifest.permission.READ_PHONE_STATE
@@ -189,14 +192,20 @@ class MainActivity : ComponentActivity() {
             openOverlayPermissionSettings()
             return
         }
-        ContextCompat.startForegroundService(
-            this,
-            Intent(this, SnoopOverlayService::class.java)
-        )
+        try {
+            ContextCompat.startForegroundService(
+                this,
+                Intent(this, SnoopOverlayService::class.java)
+            )
+            serviceRunning = true
+        } catch (_: Exception) {
+            serviceRunning = SnoopOverlayService.isRunning()
+        }
     }
 
     private fun stopSnoopService() {
         stopService(Intent(this, SnoopOverlayService::class.java))
+        serviceRunning = false
     }
 }
 
@@ -224,6 +233,7 @@ private fun MainContent(
     hasPhonePermission: Boolean,
     hasNotificationPermission: Boolean,
     hasCameraPermission: Boolean,
+    serviceRunning: Boolean,
     onEnableOverlayPermission: () -> Unit,
     onEnableNotifListenerPermission: () -> Unit,
     onRequestPhonePermission: () -> Unit,
@@ -266,7 +276,7 @@ private fun MainContent(
                     )
                 }
 
-                val isRunning = SnoopOverlayService.isRunning()
+                val isRunning = serviceRunning
                 Box(
                     modifier = Modifier
                         .clip(CircleShape)
@@ -322,6 +332,7 @@ private fun MainContent(
                         hasPhonePermission = hasPhonePermission,
                         hasNotificationPermission = hasNotificationPermission,
                         hasCameraPermission = hasCameraPermission,
+                        serviceRunning = serviceRunning,
                         onEnableOverlayPermission = onEnableOverlayPermission,
                         onEnableNotifListenerPermission = onEnableNotifListenerPermission,
                         onRequestPhonePermission = onRequestPhonePermission,
@@ -345,6 +356,7 @@ private fun OverviewTab(
     hasPhonePermission: Boolean,
     hasNotificationPermission: Boolean,
     hasCameraPermission: Boolean,
+    serviceRunning: Boolean,
     onEnableOverlayPermission: () -> Unit,
     onEnableNotifListenerPermission: () -> Unit,
     onRequestPhonePermission: () -> Unit,
@@ -353,8 +365,7 @@ private fun OverviewTab(
     onStartService: () -> Unit,
     onStopService: () -> Unit
 ) {
-    val isRunning = SnoopOverlayService.isRunning()
-    val app = SnoopApp.getInstance()
+    val isRunning = serviceRunning
 
     Column(
         modifier = Modifier
