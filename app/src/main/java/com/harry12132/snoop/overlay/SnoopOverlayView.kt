@@ -25,7 +25,6 @@ import com.harry12132.snoop.model.CallStatus
 import com.harry12132.snoop.model.ModuleType
 import com.harry12132.snoop.model.RingerMode
 import com.harry12132.snoop.model.SnoopOverlayState
-import com.harry12132.snoop.ui.AppleCallActionButton
 import com.harry12132.snoop.ui.ApplePlayPauseIconView
 import com.harry12132.snoop.ui.AppleSkipIconView
 import com.harry12132.snoop.ui.EqualizerView
@@ -87,7 +86,7 @@ class SnoopOverlayView(
                 val diffY = e2.y - e1.y
 
                 if (abs(diffX) > abs(diffY)) {
-                    if (abs(diffX) > 80 && abs(velocityX) > 80) {
+                    if (currentSettings.enableSwipeGestures && abs(diffX) > 80 && abs(velocityX) > 80) {
                         if (diffX > 0) {
                             stateHub.cycleNextModule()
                         } else {
@@ -483,43 +482,23 @@ class SnoopOverlayView(
             gravity = Gravity.CENTER_HORIZONTAL
         }
 
-        val actionsRow = LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER
-            setPadding(0, dp(16), 0, 0)
+        val guidanceText = TextView(context).apply {
+            text = when (call.status) {
+                CallStatus.INCOMING -> "Answer or decline using your phone's call controls."
+                CallStatus.OUTGOING, CallStatus.ACTIVE -> "Manage this call using your phone's call controls."
+                CallStatus.ENDED -> "Call finished."
+            }
+            setTextColor(Color.rgb(142, 142, 147))
+            textSize = 12f
+            gravity = Gravity.CENTER_HORIZONTAL
+            setPadding(0, dp(12), 0, 0)
         }
 
-        if (call.status == CallStatus.INCOMING) {
-            val answerBtn = AppleCallActionButton(context, isAnswer = true) {
-                call.onAnswer?.invoke()
-            }.apply {
-                layoutParams = LinearLayout.LayoutParams(dp(52), dp(52)).apply {
-                    setMargins(dp(16), 0, dp(16), 0)
-                }
-            }
-
-            val declineBtn = AppleCallActionButton(context, isAnswer = false) {
-                call.onReject?.invoke()
-            }.apply {
-                layoutParams = LinearLayout.LayoutParams(dp(52), dp(52)).apply {
-                    setMargins(dp(16), 0, dp(16), 0)
-                }
-            }
-
-            actionsRow.addView(declineBtn)
-            actionsRow.addView(answerBtn)
-        } else {
-            val endBtn = AppleCallActionButton(context, isAnswer = false) {
-                stateHub.callObserver.setSimulatedCall(CallStatus.ENDED)
-            }.apply {
-                layoutParams = LinearLayout.LayoutParams(dp(52), dp(52))
-            }
-            actionsRow.addView(endBtn)
-        }
-
+        // Android does not let an ordinary overlay app answer or hang up
+        // cellular calls. Do not show decorative buttons that cannot work.
         container.addView(callerText)
         container.addView(statusText)
-        container.addView(actionsRow)
+        container.addView(guidanceText)
     }
 
     private fun buildTimerViewExpanded(container: LinearLayout) {
@@ -808,9 +787,9 @@ class SnoopOverlayView(
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        if (gestureDetector.onTouchEvent(event)) {
-            return true
-        }
+        // Always feed the detector, but do not return early: the same gesture
+        // stream also drives long-press dragging below.
+        gestureDetector.onTouchEvent(event)
 
         when (event.actionMasked) {
             MotionEvent.ACTION_DOWN -> {
@@ -834,7 +813,11 @@ class SnoopOverlayView(
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 if (isDraggingPosition) {
                     isDraggingPosition = false
-                    mainPillBackground.setStroke(0, Color.TRANSPARENT)
+                    if (currentSettings.showAlignmentGuide) {
+                        mainPillBackground.setStroke(dp(2), Color.argb(220, 255, 59, 48))
+                    } else {
+                        mainPillBackground.setStroke(0, Color.TRANSPARENT)
+                    }
                     invalidate()
                     stateHub.settingsManager.updateSettings {
                         it.copy(offsetXDp = pxToDp(windowParams.x), offsetYDp = pxToDp(windowParams.y))
