@@ -123,11 +123,18 @@ class SnoopNotificationListenerService : NotificationListenerService() {
             return
         }
 
+        // Ignore Snoop's own persistent service notification and unrelated
+        // ongoing system notifications. They are not user-facing alerts.
+        if (pkg == packageName || (notification.flags and Notification.FLAG_ONGOING_EVENT) != 0) return
+
         // General Notification
         if (title.isNotBlank() || text.isNotBlank()) {
             val appIcon = getNotificationLargeIcon(extras, pkg)
             val actionsList = mutableListOf<NotificationActionItem>()
-            notification.actions?.forEach { act ->
+            notification.actions
+                ?.filter { it.remoteInputs.isNullOrEmpty() }
+                ?.take(2)
+                ?.forEach { act ->
                 actionsList.add(
                     NotificationActionItem(
                         title = act.title?.toString() ?: "Action",
@@ -145,6 +152,13 @@ class SnoopNotificationListenerService : NotificationListenerService() {
                 text = text,
                 postTime = sbn.postTime,
                 actions = actionsList,
+                onOpen = {
+                    try {
+                        sbn.notification.contentIntent?.send()
+                    } catch (_: PendingIntent.CanceledException) {
+                        // The source app may have withdrawn this notification.
+                    }
+                },
                 onDismiss = {
                     try {
                         cancelNotification(sbn.key)
