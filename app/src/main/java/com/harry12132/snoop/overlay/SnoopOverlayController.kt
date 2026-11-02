@@ -5,9 +5,7 @@ import android.graphics.PixelFormat
 import android.view.Gravity
 import android.view.WindowManager
 
-/**
- * Owns the single overlay window and guarantees it is attached/removed once.
- */
+/** Owns the single overlay window and guarantees it is attached/removed once. */
 class SnoopOverlayController(context: Context) {
     private val appContext = context.applicationContext
     private val windowManager =
@@ -19,6 +17,8 @@ class SnoopOverlayController(context: Context) {
         if (overlayView != null) return
 
         val density = appContext.resources.displayMetrics.density
+        val topOffsetDp = appContext.getSharedPreferences("snoop_settings", Context.MODE_PRIVATE)
+            .getInt("top_offset_dp", 16)
         val params = WindowManager.LayoutParams(
             (126 * density).toInt(),
             (36 * density).toInt(),
@@ -29,9 +29,7 @@ class SnoopOverlayController(context: Context) {
             PixelFormat.TRANSLUCENT
         ).apply {
             gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-            // Start at the physical top edge. The system status bar may still
-            // be layered above application overlays on some Android builds.
-            y = 0
+            y = (topOffsetDp * density).toInt()
         }
 
         val view = SnoopOverlayView(appContext, windowManager, params)
