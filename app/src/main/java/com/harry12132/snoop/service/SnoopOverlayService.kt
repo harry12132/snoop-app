@@ -131,8 +131,3 @@ class SnoopOverlayService : Service() {
     }
 }
 
-/**
- * Placeholder exception type kept local to the service's failure boundary.
- * WindowManager exceptions are caught explicitly above.
- */
-private class WindowManagerFailure : RuntimeException()
