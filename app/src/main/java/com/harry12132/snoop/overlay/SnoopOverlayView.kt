@@ -60,6 +60,10 @@ class SnoopOverlayView(
     private var initialParamY = 0
 
     private var animator: ValueAnimator? = null
+    private val autoCollapseHandler = Handler(Looper.getMainLooper())
+    private val autoCollapseRunnable = Runnable {
+        if (isExpanded && currentSettings.autoCollapseSeconds > 0) animateTo(false)
+    }
     private var collapsedTitleView: TextView? = null
     private var collapsedRightTextView: TextView? = null
     private var timerValueView: TextView? = null
@@ -212,6 +216,7 @@ class SnoopOverlayView(
     }
 
     fun dispose() {
+        autoCollapseHandler.removeCallbacks(autoCollapseRunnable)
         animator?.cancel()
         animator = null
     }
@@ -221,7 +226,11 @@ class SnoopOverlayView(
     }
 
     private fun animateTo(targetExpanded: Boolean) {
+        autoCollapseHandler.removeCallbacks(autoCollapseRunnable)
         if (animator?.isRunning == true) animator?.cancel()
+        if (targetExpanded && currentSettings.autoCollapseSeconds > 0) {
+            autoCollapseHandler.postDelayed(autoCollapseRunnable, currentSettings.autoCollapseSeconds * 1000L)
+        }
         isExpanded = targetExpanded
 
         val collapsedWidth = dp(currentSettings.collapsedWidthDp)
