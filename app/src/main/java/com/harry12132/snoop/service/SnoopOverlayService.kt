@@ -13,7 +13,7 @@ import android.provider.Settings
 import androidx.core.app.NotificationCompat
 import com.harry12132.snoop.MainActivity
 import com.harry12132.snoop.R
-import com.harry12132.snoop.data.SnoopSettingsManager
+import com.harry12132.snoop.SnoopApp
 import com.harry12132.snoop.manager.SnoopStateHub
 import com.harry12132.snoop.overlay.SnoopOverlayController
 
@@ -26,11 +26,9 @@ class SnoopOverlayService : Service() {
         instance = this
         createNotificationChannel()
 
-        val settingsManager = SnoopSettingsManager(this)
-        val hub = SnoopStateHub(this, settingsManager)
+        val hub = SnoopApp.getInstance().stateHub
         stateHub = hub
         hub.start()
-
         overlayController = SnoopOverlayController(this, hub)
     }
 
@@ -50,7 +48,13 @@ class SnoopOverlayService : Service() {
         return try {
             overlayController?.show()
             START_STICKY
-        } catch (_: Exception) {
+        } catch (_: SecurityException) {
+            stopSnoop()
+            START_NOT_STICKY
+        } catch (_: WindowManager.BadTokenException) {
+            stopSnoop()
+            START_NOT_STICKY
+        } catch (_: RuntimeException) {
             stopSnoop()
             START_NOT_STICKY
         }
@@ -104,12 +108,12 @@ class SnoopOverlayService : Service() {
                 description = "Shows when the Snoop overlay is active."
             }
             getSystemService(NotificationManager::class.java)
-                .createNotificationChannel(channel)
+                .createNotificationChannel(this)
         }
     }
 
     private fun stopSnoop() {
-        overlayController?.hide()
+        overlayController?.dispose()
         overlayController = null
         stateHub?.stop()
         stateHub = null
@@ -118,7 +122,7 @@ class SnoopOverlayService : Service() {
     }
 
     override fun onDestroy() {
-        overlayController?.hide()
+        overlayController?.dispose()
         overlayController = null
         stateHub?.stop()
         stateHub = null
