@@ -176,8 +176,8 @@ class SnoopStateHub(
         val available = mutableListOf<ModuleType>()
 
         if (settings.enableCalls && activeCall != null) available.add(ModuleType.CALL)
-        if (settings.enableTimers && (timer.isRunning || timer.isCompleted)) available.add(ModuleType.TIMER)
-        if (settings.enableStopwatches && stopwatch.isRunning) available.add(ModuleType.STOPWATCH)
+        if (settings.enableTimers && (timer.isRunning || timer.isCompleted || timer.remainingSeconds < timer.totalSeconds)) available.add(ModuleType.TIMER)
+        if (settings.enableStopwatches && (stopwatch.isRunning || stopwatch.elapsedMillis > 0L || stopwatch.laps.isNotEmpty())) available.add(ModuleType.STOPWATCH)
         if (settings.enableNavigation && nav.instruction.isNotBlank()) available.add(ModuleType.NAVIGATION)
         if (settings.enableMusic && (music.isPlaying || music.title != "No Track")) available.add(ModuleType.MUSIC)
         if (settings.enableNotifications && notif.title.isNotBlank()) available.add(ModuleType.NOTIFICATION)
