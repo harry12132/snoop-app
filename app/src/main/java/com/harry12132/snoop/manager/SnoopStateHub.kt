@@ -191,8 +191,12 @@ class SnoopStateHub(
             available.add(ModuleType.IDLE)
         }
 
-        if (userSelectedModuleIndex >= available.size) {
-            userSelectedModuleIndex = 0
+        val previouslySelected = _overlayState.value.activeModule
+        val previousIndex = available.indexOf(previouslySelected)
+        userSelectedModuleIndex = if (previousIndex >= 0) {
+            previousIndex
+        } else {
+            userSelectedModuleIndex.coerceIn(0, available.lastIndex)
         }
 
         val primaryModule = available.firstOrNull() ?: ModuleType.IDLE
