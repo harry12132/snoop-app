@@ -704,8 +704,8 @@ private fun FeaturesTab(
 
         FeatureToggleItem(
             icon = Icons.Default.Call,
-            title = "Calls & Quick Actions",
-            description = "Incoming/active calls, call duration & answer/end actions",
+            title = "Call detection",
+            description = "Incoming and active call status with an elapsed call timer. Call controls stay in your Phone app.",
             checked = settings.enableCalls,
             onCheckedChange = { checked -> settingsManager.updateSettings { it.copy(enableCalls = checked) } }
         )
