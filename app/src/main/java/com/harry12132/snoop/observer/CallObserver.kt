@@ -145,20 +145,4 @@ class CallObserver(private val context: Context) {
         }
     }
 
-    fun setSimulatedCall(status: CallStatus, callerName: String = "John Doe") {
-        if (status == CallStatus.ENDED) {
-            durationJob?.cancel()
-            _callState.value = null
-        } else if (status == CallStatus.INCOMING) {
-            durationJob?.cancel()
-            _callState.value = CallState(
-                callerName = callerName,
-                callerNumber = "+1 (555) 019-2834",
-                status = CallStatus.INCOMING,
-                durationSeconds = 0
-            )
-        } else {
-            startDurationTicker(callerName, status)
-        }
-    }
 }
