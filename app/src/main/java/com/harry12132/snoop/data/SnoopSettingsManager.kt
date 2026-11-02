@@ -39,7 +39,8 @@ data class SnoopSettings(
     val enableDownloads: Boolean = true,
     val enableSystemControls: Boolean = true,
     val enableSwipeGestures: Boolean = true,
-    val autoCollapseSeconds: Int = 5
+    val autoCollapseSeconds: Int = 5,
+    val autoFitToCutout: Boolean = true
 )
 
 class SnoopSettingsManager(context: Context) {
@@ -94,7 +95,8 @@ class SnoopSettingsManager(context: Context) {
             enableDownloads = prefs.getBoolean(KEY_ENABLE_DOWNLOADS, true),
             enableSystemControls = prefs.getBoolean(KEY_ENABLE_SYS_CTRL, true),
             enableSwipeGestures = prefs.getBoolean(KEY_ENABLE_SWIPE, true),
-            autoCollapseSeconds = prefs.getInt(KEY_AUTO_COLLAPSE, 5)
+            autoCollapseSeconds = prefs.getInt(KEY_AUTO_COLLAPSE, 5),
+            autoFitToCutout = prefs.getBoolean(KEY_AUTO_FIT_CUTOUT, true)
         )
     }
 
@@ -122,6 +124,7 @@ class SnoopSettingsManager(context: Context) {
             .putBoolean(KEY_ENABLE_SYS_CTRL, settings.enableSystemControls)
             .putBoolean(KEY_ENABLE_SWIPE, settings.enableSwipeGestures)
             .putInt(KEY_AUTO_COLLAPSE, settings.autoCollapseSeconds)
+            .putBoolean(KEY_AUTO_FIT_CUTOUT, settings.autoFitToCutout)
             .apply()
     }
 
@@ -149,5 +152,6 @@ class SnoopSettingsManager(context: Context) {
         private const val KEY_ENABLE_SYS_CTRL = "enable_sys_ctrl"
         private const val KEY_ENABLE_SWIPE = "enable_swipe"
         private const val KEY_AUTO_COLLAPSE = "auto_collapse"
+        private const val KEY_AUTO_FIT_CUTOUT = "auto_fit_cutout"
     }
 }

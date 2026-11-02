@@ -37,17 +37,23 @@ class SnoopOverlayController(
 
         val settings = stateHub.settingsManager.getSettings()
         val density = appContext.resources.displayMetrics.density
+        val collapsedWidthPx = minOf(
+            dp(settings.collapsedWidthDp, density),
+            (appContext.resources.displayMetrics.widthPixels - dp(24, density)).coerceAtLeast(dp(120, density))
+        )
         val windowParams = WindowManager.LayoutParams(
-            minOf(dp(settings.collapsedWidthDp, density), (appContext.resources.displayMetrics.widthPixels - dp(24, density)).coerceAtLeast(dp(120, density))),
+            collapsedWidthPx,
             dp(settings.collapsedHeightDp, density),
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
             PixelFormat.TRANSLUCENT
         ).apply {
-            gravity = gravityFor(settings.alignment)
-            y = dp(settings.offsetYDp, density)
-            x = dp(settings.offsetXDp, density)
+            val placement = computePlacement(settings, collapsedWidthPx, density)
+            gravity = placement.horizontalGravity
+            y = placement.y
+            x = placement.x
         }
 
         val view = SnoopOverlayView(appContext, windowManager, windowParams, stateHub)
@@ -73,9 +79,14 @@ class SnoopOverlayController(
                 overlayView?.updateSettings(updated)
                 val view = overlayView ?: return@collectLatest
                 val currentParams = params ?: return@collectLatest
-                currentParams.gravity = gravityFor(updated.alignment)
-                currentParams.x = dp(updated.offsetXDp, density)
-                currentParams.y = dp(updated.offsetYDp, density)
+                val widthPx = minOf(
+                    dp(updated.collapsedWidthDp, density),
+                    (appContext.resources.displayMetrics.widthPixels - dp(24, density)).coerceAtLeast(dp(120, density))
+                )
+                val placement = computePlacement(updated, widthPx, density)
+                currentParams.gravity = placement.horizontalGravity
+                currentParams.x = placement.x
+                currentParams.y = placement.y
                 try {
                     windowManager.updateViewLayout(view, currentParams)
                 } catch (_: IllegalArgumentException) {
@@ -84,6 +95,24 @@ class SnoopOverlayController(
                     hide()
                 }
             }
+        }
+    }
+
+    /**
+     * When auto-fit is enabled the window is placed from the REAL hardware
+     * cutout so it can never sit on top of the camera. Otherwise the user's
+     * manual alignment/offsets are used.
+     */
+    private fun computePlacement(
+        settings: com.harry12132.snoop.data.SnoopSettings,
+        collapsedWidthPx: Int,
+        density: Float
+    ): CutoutFitter.Placement {
+        val yOffset = dp(settings.offsetYDp, density)
+        return if (settings.autoFitToCutout) {
+            CutoutFitter.placementFor(appContext, collapsedWidthPx, yOffset, dp(settings.offsetXDp, density))
+        } else {
+            CutoutFitter.Placement(gravityFor(settings.alignment), dp(settings.offsetXDp, density), yOffset)
         }
     }
 

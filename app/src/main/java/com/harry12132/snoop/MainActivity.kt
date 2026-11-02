@@ -244,6 +244,7 @@ private fun MainContent(
 ) {
     var selectedTab by remember { mutableIntStateOf(0) }
     val settings by settingsManager.settingsFlow.collectAsState()
+    val activityContext = androidx.compose.ui.platform.LocalContext.current
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background
@@ -341,7 +342,7 @@ private fun MainContent(
                         onStartService = onStartService,
                         onStopService = onStopService
                     )
-                    1 -> CameraPositionTab(settingsManager = settingsManager, settings = settings)
+                    1 -> CameraPositionTab(settingsManager = settingsManager, settings = settings, context = activityContext)
                     2 -> FeaturesTab(settingsManager = settingsManager, settings = settings)
                 }
             }
@@ -518,7 +519,8 @@ private fun PermissionCard(
 @Composable
 private fun CameraPositionTab(
     settingsManager: SnoopSettingsManager,
-    settings: SnoopSettings
+    settings: SnoopSettings,
+    context: android.content.Context
 ) {
     Column(
         modifier = Modifier
@@ -527,6 +529,46 @@ private fun CameraPositionTab(
     ) {
         Text("Camera Cutout & Position", color = Color.Black, fontSize = 18.sp, fontWeight = FontWeight.Bold)
         Text("Align Snoop precisely around your physical front camera hole", color = Color(0xFF8E8E93), fontSize = 13.sp)
+        Spacer(modifier = Modifier.height(14.dp))
+
+        // Auto-fit: reads the real DisplayCutout for THIS phone.
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            shape = RoundedCornerShape(16.dp),
+            elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Auto-fit to camera", color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        "Scales & positions the island from your phone's real camera cutout so it never covers the lens.",
+                        color = Color(0xFF8E8E93),
+                        fontSize = 12.sp
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        "Detected: " + com.harry12132.snoop.overlay.CutoutFitter.describe(context),
+                        color = MaterialTheme.colorScheme.primary,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+                Switch(
+                    checked = settings.autoFitToCutout,
+                    onCheckedChange = { checked ->
+                        settingsManager.updateSettings { it.copy(autoFitToCutout = checked) }
+                    },
+                    colors = SwitchDefaults.colors(checkedThumbColor = Color.White, checkedTrackColor = MaterialTheme.colorScheme.primary)
+                )
+            }
+        }
+
         Spacer(modifier = Modifier.height(14.dp))
 
         // Red Calibration Guide Toggle
@@ -573,7 +615,7 @@ private fun CameraPositionTab(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable {
+                            .clickable(enabled = !settings.autoFitToCutout) {
                                 settingsManager.updateSettings {
                                     val alignment = when (mode) {
                                         CutoutMode.PUNCH_HOLE_LEFT -> com.harry12132.snoop.data.OverlayAlignment.LEFT
@@ -588,6 +630,7 @@ private fun CameraPositionTab(
                     ) {
                         RadioButton(
                             selected = settings.cutoutMode == mode,
+                        enabled = !settings.autoFitToCutout,
                             onClick = {
                                 settingsManager.updateSettings {
                                     val alignment = when (mode) {
@@ -615,16 +658,18 @@ private fun CameraPositionTab(
             valueStr = "${settings.offsetYDp} dp",
             value = settings.offsetYDp.toFloat(),
             range = 0f..100f,
+            enabled = !settings.autoFitToCutout, // Y offset always fine-tunes vertical nudge
             onValueChange = { v -> settingsManager.updateSettings { it.copy(offsetYDp = v.toInt()) } }
         )
 
         Spacer(modifier = Modifier.height(10.dp))
 
         SliderCard(
-            label = "Horizontal Offset (X)",
+            label = "Horizontal Offset (X)" + if (settings.autoFitToCutout) " (manual mode only)" else "",
             valueStr = "${settings.offsetXDp} dp",
             value = settings.offsetXDp.toFloat(),
             range = -100f..100f,
+            enabled = !settings.autoFitToCutout,
             onValueChange = { v -> settingsManager.updateSettings { it.copy(offsetXDp = v.toInt()) } }
         )
 
@@ -811,6 +856,7 @@ private fun SliderCard(
     valueStr: String,
     value: Float,
     range: ClosedFloatingPointRange<Float>,
+    enabled: Boolean = true,
     onValueChange: (Float) -> Unit
 ) {
     Card(
@@ -821,13 +867,14 @@ private fun SliderCard(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(label, color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                Text(valueStr, color = MaterialTheme.colorScheme.primary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                Text(label, color = if (enabled) Color.Black else Color(0xFFAEAEB2), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                Text(valueStr, color = if (enabled) MaterialTheme.colorScheme.primary else Color(0xFFAEAEB2), fontSize = 14.sp, fontWeight = FontWeight.Bold)
             }
             Slider(
                 value = value,
                 onValueChange = onValueChange,
                 valueRange = range,
+                enabled = enabled,
                 colors = SliderDefaults.colors(
                     thumbColor = MaterialTheme.colorScheme.primary,
                     activeTrackColor = MaterialTheme.colorScheme.primary

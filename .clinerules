@@ -1,0 +1,4 @@
+Do not attempt to run external tools like sonar-scanner or sonarqube.
+Do not output raw JSON tool code blocks.
+Inspect workspace files using read_file or list_files.
+Give direct code fixes and file edits instead of abstract corporate plans.

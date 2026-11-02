@@ -4,6 +4,7 @@ import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Color
+import android.graphics.Outline
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.os.Handler
@@ -12,6 +13,7 @@ import android.view.GestureDetector
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewOutlineProvider
 import android.view.WindowManager
 import android.view.animation.DecelerateInterpolator
 import android.widget.FrameLayout
@@ -202,8 +204,9 @@ class SnoopOverlayView(
         when (state.activeModule) {
             ModuleType.TIMER -> {
                 val text = String.format("%02d:%02d", state.timer.remainingSeconds / 60, state.timer.remainingSeconds % 60)
-                timerValueView?.text = if (state.timer.isCompleted) "00:00" else text
-                collapsedRightTextView?.text = text
+                val shown = if (state.timer.isCompleted) "00:00" else text
+                timerValueView?.text = shown
+                collapsedRightTextView?.text = shown
             }
             ModuleType.STOPWATCH -> {
                 val totalSecs = state.stopwatch.elapsedMillis / 1000
@@ -362,12 +365,23 @@ class SnoopOverlayView(
                     } else {
                         setBackgroundColor(Color.rgb(40, 40, 45))
                     }
+                    // Rounded artwork like the iOS island pill.
+                    outlineProvider = object : ViewOutlineProvider() {
+                        override fun getOutline(view: View, outline: Outline) {
+                            outline.setRoundRect(0, 0, view.width, view.height, dp(6).toFloat())
+                        }
+                    }
                     clipToOutline = true
                 }
             }
             ModuleType.CALL -> {
                 TextView(context).apply {
-                    text = "🟢"
+                    text = when (currentState.call.status) {
+                        CallStatus.INCOMING -> "📞"
+                        CallStatus.OUTGOING -> "📤"
+                        CallStatus.ACTIVE -> "🟢"
+                        CallStatus.ENDED -> "⚪"
+                    }
                     textSize = 12f
                 }
             }
@@ -507,6 +521,12 @@ class SnoopOverlayView(
                 setImageBitmap(music.artwork)
             } else {
                 setBackgroundColor(Color.rgb(44, 44, 46))
+            }
+            // Rounded artwork like the iOS island pill.
+            outlineProvider = object : ViewOutlineProvider() {
+                override fun getOutline(view: View, outline: Outline) {
+                    outline.setRoundRect(0, 0, view.width, view.height, dp(12).toFloat())
+                }
             }
             clipToOutline = true
         }

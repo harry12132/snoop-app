@@ -119,7 +119,9 @@ class CallObserver(private val context: Context) {
                 } else {
                     CallStatus.OUTGOING
                 }
-                startDurationTicker(number, updatedStatus)
+                // Keep the caller identity we learned while ringing — OFFHOOK
+                // reports no number and would otherwise reset it to "Unknown".
+                startDurationTicker(current?.callerName ?: number, updatedStatus)
             }
             TelephonyManager.CALL_STATE_IDLE -> {
                 durationJob?.cancel()
