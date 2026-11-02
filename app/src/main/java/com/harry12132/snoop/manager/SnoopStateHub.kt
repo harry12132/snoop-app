@@ -37,7 +37,7 @@ class SnoopStateHub(
 
     val batteryObserver = BatteryObserver(context)
     val callObserver = CallObserver(context)
-    val timerStopwatchEngine = TimerStopwatchEngine()
+    val timerStopwatchEngine = TimerStopwatchEngine(context)
     val systemControlsManager = SystemControlsManager(context)
 
     private val _overlayState = MutableStateFlow(SnoopOverlayState())
