@@ -146,6 +146,7 @@ class SnoopStateHub(
     private suspend fun periodicMediaCheck() {
         while (true) {
             SnoopNotificationListenerService.updateMediaSessions(context)
+            systemControlsManager.updateState()
             delay(2000L)
         }
     }
