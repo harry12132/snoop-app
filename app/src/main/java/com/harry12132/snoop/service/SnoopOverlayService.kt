@@ -39,23 +39,16 @@ class SnoopOverlayService : Service() {
             return START_NOT_STICKY
         }
 
-        startAsForegroundService()
-
-        if (!Settings.canDrawOverlays(this)) {
-            stopSnoop()
-            return START_NOT_STICKY
-        }
-
         return try {
-            overlayController?.show()
-            START_STICKY
-        } catch (_: SecurityException) {
-            stopSnoop()
-            START_NOT_STICKY
-        } catch (_: WindowManager.BadTokenException) {
-            stopSnoop()
-            START_NOT_STICKY
-        } catch (_: RuntimeException) {
+            startAsForegroundService()
+            if (!Settings.canDrawOverlays(this)) {
+                stopSnoop()
+                START_NOT_STICKY
+            } else {
+                overlayController?.show()
+                START_STICKY
+            }
+        } catch (_: Exception) {
             stopSnoop()
             START_NOT_STICKY
         }
@@ -63,7 +56,7 @@ class SnoopOverlayService : Service() {
 
     private fun startAsForegroundService() {
         val notification = buildNotification()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             startForeground(
                 NOTIFICATION_ID,
                 notification,
