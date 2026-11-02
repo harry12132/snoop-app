@@ -47,7 +47,9 @@ class SystemControlsManager(private val context: Context) {
             ringerMode = currentRingerMode,
             volumePercent = volPct,
             onToggleFlashlight = { toggleFlashlight() },
-            onToggleRinger = { toggleRingerMode() }
+            onToggleRinger = { toggleRingerMode() },
+            onVolumeDown = { adjustVolume(false) },
+            onVolumeUp = { adjustVolume(true) }
         )
     }
 
@@ -62,6 +64,18 @@ class SystemControlsManager(private val context: Context) {
             // Camera permission has not been granted. Keep the displayed state truthful.
         } catch (_: Exception) {
             updateState()
+        }
+    }
+
+    private fun adjustVolume(increase: Boolean) {
+        try {
+            audioManager.adjustStreamVolume(
+                AudioManager.STREAM_MUSIC,
+                if (increase) AudioManager.ADJUST_RAISE else AudioManager.ADJUST_LOWER,
+                0
+            )
+            updateState()
+        } catch (_: Exception) {
         }
     }
 
