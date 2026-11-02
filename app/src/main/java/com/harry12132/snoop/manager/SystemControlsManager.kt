@@ -22,9 +22,9 @@ class SystemControlsManager(private val context: Context) {
 
     init {
         try {
-            val cameraIds = cameraManager.cameraIdList
-            if (cameraIds.isNotEmpty()) {
-                cameraId = cameraIds[0]
+            cameraId = cameraManager.cameraIdList.firstOrNull { id ->
+                cameraManager.getCameraCharacteristics(id)
+                    .get(android.hardware.camera2.CameraCharacteristics.FLASH_INFO_AVAILABLE) == true
             }
         } catch (_: Exception) {
         }
@@ -53,11 +53,15 @@ class SystemControlsManager(private val context: Context) {
 
     fun toggleFlashlight() {
         val id = cameraId ?: return
+        val requestedState = !isTorchOn
         try {
-            isTorchOn = !isTorchOn
-            cameraManager.setTorchMode(id, isTorchOn)
+            cameraManager.setTorchMode(id, requestedState)
+            isTorchOn = requestedState
             updateState()
+        } catch (_: SecurityException) {
+            // Camera permission has not been granted. Keep the displayed state truthful.
         } catch (_: Exception) {
+            updateState()
         }
     }
 
