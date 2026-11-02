@@ -66,11 +66,14 @@ class SnoopOverlayController(
         settingsJob = scope.launch {
             stateHub.settingsManager.settingsFlow.collectLatest { updated ->
                 overlayView?.updateSettings(updated)
+                val view = overlayView ?: return@collectLatest
                 val currentParams = params ?: return@collectLatest
                 currentParams.gravity = gravityFor(updated.alignment)
                 currentParams.x = dp(updated.offsetXDp, density)
                 currentParams.y = dp(updated.offsetYDp, density)
-                windowManager.updateViewLayout(overlayView, currentParams)
+                currentParams.width = dp(updated.collapsedWidthDp, density)
+                currentParams.height = dp(updated.collapsedHeightDp, density)
+                windowManager.updateViewLayout(view, currentParams)
             }
         }
     }
