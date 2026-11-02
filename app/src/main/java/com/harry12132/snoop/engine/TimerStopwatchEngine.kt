@@ -110,13 +110,17 @@ class TimerStopwatchEngine(context: Context) {
             )
             persistCurrentTimer()
         } else {
-            val remaining = current.remainingSeconds
-            if (remaining <= 0) {
-                resetTimer()
-                return
+            val remaining = if (current.remainingSeconds <= 0) {
+                current.totalSeconds
+            } else {
+                current.remainingSeconds
             }
             timerDeadlineEpochMs = System.currentTimeMillis() + remaining * 1000L
-            _timerState.value = current.copy(isRunning = true, isCompleted = false)
+            _timerState.value = current.copy(
+                remainingSeconds = remaining,
+                isRunning = true,
+                isCompleted = false
+            )
             persistCurrentTimer()
             runTimerLoop()
         }
