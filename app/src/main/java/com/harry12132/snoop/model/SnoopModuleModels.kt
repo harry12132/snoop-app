@@ -116,7 +116,9 @@ data class SystemControlState(
     val ringerMode: RingerMode = RingerMode.NORMAL,
     val volumePercent: Int = 50,
     val onToggleFlashlight: (() -> Unit)? = null,
-    val onToggleRinger: (() -> Unit)? = null
+    val onToggleRinger: (() -> Unit)? = null,
+    val onVolumeDown: (() -> Unit)? = null,
+    val onVolumeUp: (() -> Unit)? = null
 )
 
 data class SnoopOverlayState(
