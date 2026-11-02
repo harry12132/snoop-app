@@ -178,7 +178,8 @@ class SnoopOverlayView(
                 ModuleType.NOTIFICATION -> previous.notification.id != state.notification.id ||
                     previous.notification.title != state.notification.title ||
                     previous.notification.text != state.notification.text ||
-                    previous.notification.actions.size != state.notification.actions.size
+                    previous.notification.actions.map { it.title } != state.notification.actions.map { it.title } ||
+                    (previous.notification.onOpen != null) != (state.notification.onOpen != null)
                 ModuleType.BATTERY -> previous.battery.percentage != state.battery.percentage ||
                     previous.battery.isCharging != state.battery.isCharging ||
                     previous.battery.plugType != state.battery.plugType
