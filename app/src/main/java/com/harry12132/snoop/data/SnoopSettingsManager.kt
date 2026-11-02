@@ -28,7 +28,6 @@ data class SnoopSettings(
     val expandedHeightDp: Int = 190,
     val cornerRadiusDp: Int = 28,
     val backgroundOpacity: Float = 0.98f,
-    val showSecondaryBubble: Boolean = false,
     val showAlignmentGuide: Boolean = false,
     val enableMusic: Boolean = true,
     val enableCalls: Boolean = true,
@@ -84,7 +83,6 @@ class SnoopSettingsManager(context: Context) {
             expandedHeightDp = prefs.getInt(KEY_EXPANDED_H, 190),
             cornerRadiusDp = prefs.getInt(KEY_CORNER_RADIUS, 28),
             backgroundOpacity = prefs.getFloat(KEY_OPACITY, 0.98f),
-            showSecondaryBubble = prefs.getBoolean(KEY_SECONDARY_BUBBLE, false),
             showAlignmentGuide = prefs.getBoolean(KEY_ALIGNMENT_GUIDE, false),
             enableMusic = prefs.getBoolean(KEY_ENABLE_MUSIC, true),
             enableCalls = prefs.getBoolean(KEY_ENABLE_CALLS, true),
@@ -112,7 +110,6 @@ class SnoopSettingsManager(context: Context) {
             .putInt(KEY_EXPANDED_H, settings.expandedHeightDp)
             .putInt(KEY_CORNER_RADIUS, settings.cornerRadiusDp)
             .putFloat(KEY_OPACITY, settings.backgroundOpacity)
-            .putBoolean(KEY_SECONDARY_BUBBLE, settings.showSecondaryBubble)
             .putBoolean(KEY_ALIGNMENT_GUIDE, settings.showAlignmentGuide)
             .putBoolean(KEY_ENABLE_MUSIC, settings.enableMusic)
             .putBoolean(KEY_ENABLE_CALLS, settings.enableCalls)
@@ -140,7 +137,6 @@ class SnoopSettingsManager(context: Context) {
         private const val KEY_EXPANDED_H = "expanded_h"
         private const val KEY_CORNER_RADIUS = "corner_radius"
         private const val KEY_OPACITY = "opacity"
-        private const val KEY_SECONDARY_BUBBLE = "secondary_bubble"
         private const val KEY_ALIGNMENT_GUIDE = "alignment_guide"
         private const val KEY_ENABLE_MUSIC = "enable_music"
         private const val KEY_ENABLE_CALLS = "enable_calls"
