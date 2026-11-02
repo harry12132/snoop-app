@@ -1,41 +1,65 @@
 # Snoop
 
-A native Android glance interface for live activity, media, notifications, and useful system events.
+Snoop is an independent Android live-activity overlay inspired by the glanceable interaction pattern of Dynamic Island. It uses one native Android application-overlay window and public Android APIs.
 
-Snoop is an independent implementation using Android's public SDKs and documentation. Its source code, architecture, UI, assets, and product identity are original to this project.
+## Current implementation
 
-## Current status
+The project is under active repair and is **not yet a release candidate**.
 
-The first overlay-engine foundation is in place:
+Implemented in the current repair branch:
 
-- Explicit "Display over other apps" permission flow.
-- User-started foreground service with a persistent notification.
-- A single `TYPE_APPLICATION_OVERLAY` window.
-- Collapsed and expanded overlay states with animated size and corner-radius changes.
-- Stop control in the app and foreground notification.
+- One native `WindowManager` overlay with compact and expanded states.
+- Animated size and corner-radius transitions, tap-to-expand, swipe-to-switch, long-press positioning, and automatic collapse.
+- Persistent settings for camera alignment, position, dimensions, and enabled modules.
+- Media-session detection with track metadata, artwork, progress, and play/pause/skip controls.
+- Call-state detection and active-call duration. Android does not let an ordinary overlay app answer or hang up cellular calls, so Snoop directs users to the phone's native call controls.
+- Persistent countdown timers and stopwatches, including pause/resume and stopwatch laps.
+- Navigation information from supported navigation notifications.
+- Notification previews, source-app open action, supported notification actions, and dismissal.
+- Download progress notifications.
+- Battery and charging events.
+- Flashlight, ringer-mode, and media-volume controls.
 
-This is an early implementation. Device-specific positioning, status-bar/cutout behaviour, accessibility, notification/media integrations, and lifecycle edge cases still need physical-device testing.
+Integrations depend on what Android and each source app expose. Navigation and download details are notification-driven; Snoop cannot guarantee that every third-party app publishes enough information.
+
+## Required user-granted access
+
+- **Display over other apps:** required for the floating overlay.
+- **Notification access:** required for media sessions, notifications, navigation, and download notifications.
+- **Notification permission:** allows Android to show Snoop's foreground-service notification on Android 13+.
+- **Phone state:** enables call-state detection.
+- **Camera permission:** used only when the user invokes the flashlight control. Snoop does not capture camera images.
+
+Snoop should only start its monitoring observers while the user has enabled the overlay service.
 
 ## Development
 
 Open the project in Android Studio and sync Gradle.
 
 - Language: Kotlin
-- UI: Jetpack Compose for the app screen; native Android views for the overlay window
+- App UI: Jetpack Compose
+- Overlay: native Android views in a single `TYPE_APPLICATION_OVERLAY` window
 - Minimum Android version: Android 8.0 (API 26)
-- Target SDK: 35
+- Compile/target SDK: 35
 - Application ID: `com.harry12132.snoop`
+- Android Gradle Plugin: 8.13.2
+- Gradle: 8.13
+- Java: 17
 
-## Platform notes
+GitHub Actions builds the debug APK and uploads it as a workflow artifact.
 
-- Android requires the user to grant overlay access in system settings.
-- The service currently declares the Android 14+ `specialUse` foreground-service type. Its suitability and Play Console declaration must be reviewed before distribution.
-- Application overlays are layered below critical system windows such as the status bar on some Android builds. Exact camera-cutout alignment is device- and OS-dependent and is not guaranteed by this first pass.
-- A foreground-service notification is part of the user-visible running state. Android 13+ notification permission affects whether it appears in the notification drawer.
+## Platform and release notes
+
+- Android requires users to grant overlay access in system settings.
+- The foreground service uses Android 14+ `specialUse`. Its suitability and Play Console declaration must be reviewed before distribution.
+- The notification listener and overlay permissions are sensitive special access. The app must provide clear in-app disclosure and follow Google Play policy.
+- Camera-cutout positioning varies by device and Android version. Calibration settings cannot guarantee identical alignment across all phones.
+- Cellular call controls are intentionally not presented as working buttons because ordinary apps cannot execute them through public APIs.
+- A successful debug build is not proof of device compatibility. Physical-device testing, accessibility checks, privacy review, Play policy review, release signing, and a signed Android App Bundle are still required before publication.
 
 ## Principles
 
-- Native Android APIs, with explicit and minimal permissions.
-- Clear privacy explanations and user-controlled features.
-- Responsive, restrained UI and purposeful motion.
-- Testable components and documented platform limitations.
+- Native Android APIs and the smallest practical permission set.
+- No duplicate overlay windows or fake controls.
+- Clear privacy explanations and user-controlled monitoring.
+- Motion and state changes should remain responsive without rebuilding the entire overlay on every timer tick.
