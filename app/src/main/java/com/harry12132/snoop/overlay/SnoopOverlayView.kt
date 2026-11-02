@@ -829,9 +829,17 @@ class SnoopOverlayView(
         val ringerBtn = createAppleButton(ringerText) {
             sys.onToggleRinger?.invoke()
         }
+        val volumeDownBtn = createAppleButton("Vol −") {
+            sys.onVolumeDown?.invoke()
+        }
+        val volumeUpBtn = createAppleButton("Vol +") {
+            sys.onVolumeUp?.invoke()
+        }
 
         row.addView(flashBtn)
         row.addView(ringerBtn)
+        row.addView(volumeDownBtn)
+        row.addView(volumeUpBtn)
 
         container.addView(row)
     }
