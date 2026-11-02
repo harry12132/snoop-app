@@ -10,6 +10,7 @@ import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
 import android.provider.Settings
+import android.view.WindowManager
 import androidx.core.app.NotificationCompat
 import com.harry12132.snoop.MainActivity
 import com.harry12132.snoop.R
@@ -108,7 +109,7 @@ class SnoopOverlayService : Service() {
                 description = "Shows when the Snoop overlay is active."
             }
             getSystemService(NotificationManager::class.java)
-                .createNotificationChannel(this)
+                .createNotificationChannel(channel)
         }
     }
 
