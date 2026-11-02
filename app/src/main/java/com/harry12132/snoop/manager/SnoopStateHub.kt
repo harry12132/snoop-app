@@ -69,6 +69,14 @@ class SnoopStateHub(
         callObserver.start()
     }
 
+    fun startTimer(seconds: Int, label: String) {
+        timerStopwatchEngine.startTimer(seconds, label)
+    }
+
+    fun startStopwatch() {
+        timerStopwatchEngine.startStopwatch()
+    }
+
     fun stop() {
         hubJob?.cancel()
         batteryObserver.stop()
