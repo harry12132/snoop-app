@@ -63,6 +63,7 @@ class SnoopStateHub(
     }
 
     fun refreshCallPermission() {
+        if (hubJob?.isActive != true) return
         callObserver.stop()
         callObserver.start()
     }
