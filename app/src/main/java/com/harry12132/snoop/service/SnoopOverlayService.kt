@@ -13,14 +13,25 @@ import android.provider.Settings
 import androidx.core.app.NotificationCompat
 import com.harry12132.snoop.MainActivity
 import com.harry12132.snoop.R
+import com.harry12132.snoop.data.SnoopSettingsManager
+import com.harry12132.snoop.manager.SnoopStateHub
 import com.harry12132.snoop.overlay.SnoopOverlayController
 
 class SnoopOverlayService : Service() {
+    private var stateHub: SnoopStateHub? = null
     private var overlayController: SnoopOverlayController? = null
 
     override fun onCreate() {
         super.onCreate()
+        instance = this
         createNotificationChannel()
+
+        val settingsManager = SnoopSettingsManager(this)
+        val hub = SnoopStateHub(this, settingsManager)
+        stateHub = hub
+        hub.start()
+
+        overlayController = SnoopOverlayController(this, hub)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -29,7 +40,6 @@ class SnoopOverlayService : Service() {
             return START_NOT_STICKY
         }
 
-        // Promote immediately; Android requires a foreground notification.
         startAsForegroundService()
 
         if (!Settings.canDrawOverlays(this)) {
@@ -38,15 +48,9 @@ class SnoopOverlayService : Service() {
         }
 
         return try {
-            if (overlayController == null) {
-                overlayController = SnoopOverlayController(this)
-            }
             overlayController?.show()
             START_STICKY
-        } catch (_: SecurityException) {
-            stopSnoop()
-            START_NOT_STICKY
-        } catch (_: android.view.WindowManager.BadTokenException) {
+        } catch (_: Exception) {
             stopSnoop()
             START_NOT_STICKY
         }
@@ -54,7 +58,7 @@ class SnoopOverlayService : Service() {
 
     private fun startAsForegroundService() {
         val notification = buildNotification()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             startForeground(
                 NOTIFICATION_ID,
                 notification,
@@ -82,7 +86,7 @@ class SnoopOverlayService : Service() {
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_snoop_notification)
             .setContentTitle("Snoop is active")
-            .setContentText("Your glance overlay is running.")
+            .setContentText("Your glance overlay live activities are running.")
             .setContentIntent(openAppIntent)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
@@ -107,6 +111,8 @@ class SnoopOverlayService : Service() {
     private fun stopSnoop() {
         overlayController?.hide()
         overlayController = null
+        stateHub?.stop()
+        stateHub = null
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
@@ -114,6 +120,9 @@ class SnoopOverlayService : Service() {
     override fun onDestroy() {
         overlayController?.hide()
         overlayController = null
+        stateHub?.stop()
+        stateHub = null
+        instance = null
         super.onDestroy()
     }
 
@@ -123,5 +132,9 @@ class SnoopOverlayService : Service() {
         const val ACTION_STOP = "com.harry12132.snoop.action.STOP_OVERLAY"
         private const val CHANNEL_ID = "snoop_overlay"
         private const val NOTIFICATION_ID = 4101
+
+        private var instance: SnoopOverlayService? = null
+        fun getStateHub(): SnoopStateHub? = instance?.stateHub
+        fun isRunning(): Boolean = instance != null
     }
 }
