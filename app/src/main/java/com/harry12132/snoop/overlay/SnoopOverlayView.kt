@@ -139,7 +139,7 @@ class SnoopOverlayView(
         }
         mainPillBackground.cornerRadius = if (isExpanded) dp(settings.cornerRadiusDp).toFloat() else dp(settings.collapsedHeightDp / 2).toFloat()
 
-        val targetWidth = dp(if (isExpanded) settings.expandedWidthDp else settings.collapsedWidthDp)
+        val targetWidth = widthFor(isExpanded, settings)
         val targetHeight = dp(if (isExpanded) settings.expandedHeightDp else settings.collapsedHeightDp)
         windowParams.width = targetWidth
         windowParams.height = targetHeight
@@ -256,9 +256,9 @@ class SnoopOverlayView(
         }
         isExpanded = targetExpanded
 
-        val collapsedWidth = dp(currentSettings.collapsedWidthDp)
+        val collapsedWidth = widthFor(false, currentSettings)
         val collapsedHeight = dp(currentSettings.collapsedHeightDp)
-        val expandedWidth = dp(currentSettings.expandedWidthDp)
+        val expandedWidth = widthFor(true, currentSettings)
         val expandedHeight = dp(currentSettings.expandedHeightDp)
 
         val startWidth = layoutParams?.width ?: collapsedWidth
@@ -1024,6 +1024,12 @@ class SnoopOverlayView(
             }
         }
         return true
+    }
+
+    private fun widthFor(expanded: Boolean, settings: SnoopSettings): Int {
+        val requestedDp = if (expanded) settings.expandedWidthDp else settings.collapsedWidthDp
+        val maxWidth = (resources.displayMetrics.widthPixels - dp(24)).coerceAtLeast(dp(120))
+        return dp(requestedDp).coerceAtMost(maxWidth)
     }
 
     private fun dp(value: Int): Int = (value * density).roundToInt()
