@@ -188,7 +188,7 @@ class SnoopNotificationListenerService : NotificationListenerService() {
         fun actionIntent(vararg keywords: String): (() -> Unit)? {
             val action = actions.firstOrNull { item ->
                 val label = item.title?.toString()?.lowercase().orEmpty()
-                keywords.any(label::contains) && item.actionIntent != null
+                keywords.any { keyword -> label.contains(keyword) } && item.actionIntent != null
             } ?: return null
             return {
                 try {
